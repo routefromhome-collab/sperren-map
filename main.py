@@ -340,9 +340,11 @@ async def start_parsing(application: Application):
                 for street_name in sorted(grouped.keys()):
                     houses = grouped[street_name]
                     if houses:
+                        house_links = []
                         for house in houses:
                             link = f"https://www.google.com/maps/search/?api=1&query={quote(f'{street_name} {house}, {city}')}"
-                            message_lines.append(f"{street_name} {house} [map]({link})")
+                            house_links.append(f"{house} [map]({link})")
+                        message_lines.append(f"{street_name}: {', '.join(house_links)}")
                     else:
                         link = f"https://www.google.com/maps/search/?api=1&query={quote(f'{street_name}, {city}')}"
                         message_lines.append(f"{street_name} [map]({link})")
