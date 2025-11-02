@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_6e391ce178965b1da9d566aa19936e3b {
+                #map_bab023a13d1f3f77b275ff91b1d7c119 {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -56,13 +56,13 @@
 <body>
     
     
-            <div class="folium-map" id="map_6e391ce178965b1da9d566aa19936e3b" ></div>
+            <div class="folium-map" id="map_bab023a13d1f3f77b275ff91b1d7c119" ></div>
         
 
         <script>
         document.addEventListener("DOMContentLoaded", function() {
             try {
-                window.MAP = map_6e391ce178965b1da9d566aa19936e3b;
+                window.MAP = map_bab023a13d1f3f77b275ff91b1d7c119;
                 var STREETS = JSON.parse('[{"name": "point_0", "coords": [[51.2677505, 7.2106403]]}, {"name": "point_1", "coords": [[51.2497094, 7.1478419]]}]');
 
                 function haversine_m(a,b) {
@@ -127,7 +127,8 @@
                             var st = STREETS[si];
                             var coords = st.coords || [];
                             if (!coords || coords.length === 0) continue;
-                            // if coords is array of segments, flatten
+
+                            // flatten possible segments: coords can sometimes be [[seg1],[seg2],...]
                             var flat;
                             if (Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
                                 flat = [];
@@ -136,6 +137,7 @@
                                 flat = coords;
                             }
                             if (flat.length === 0) continue;
+
                             var info = nearestPointOnPolyline(user, flat);
                             if (!info) continue;
                             if (!bestInfo || info.dist < bestInfo.dist) {
@@ -149,44 +151,36 @@
                             return;
                         }
 
-                        try {
-                            // remove previous highlights
-                            if (!window._sperren_highlights) window._sperren_highlights = [];
-                            window._sperren_highlights.forEach(function(l){ try { MAP.removeLayer(l); } catch(e) {} });
-                            window._sperren_highlights = [];
+                        // remove previous highlights (popup and user marker)
+                        if (!window._sperren_highlights) window._sperren_highlights = [];
+                        window._sperren_highlights.forEach(function(l){ try { MAP.removeLayer(l); } catch(e) {} });
+                        window._sperren_highlights = [];
 
-                            // highlight street
-                            var hl = L.polyline(bestStreet.coords, {color:"#1f78b4", weight:12, opacity:0.85}).addTo(MAP);
-                            window._sperren_highlights.push(hl);
+                        // nearest point on street
+                        var nearPt = bestInfo.point;
+                        var meters = Math.round(bestInfo.dist);
+                        var walkMin = Math.max(1, Math.round((meters/1000)/5*60)); // 5 km/h
 
-                            // nearest point on street
-                            var nearPt = bestInfo.point;
-                            var meters = Math.round(bestInfo.dist);
-                            var walkMin = Math.max(1, Math.round((meters/1000)/5*60)); // 5 km/h
+                        // show popup exactly on that point (ON the street)
+                        var popup = L.popup({maxWidth:400})
+                            .setLatLng(nearPt)
+                            .setContent(
+                                "<b>Ближайшая улица:</b> " + (bestStreet.name || "—") +
+                                "<br><b>Расстояние:</b> " + meters + " м" +
+                                "<br><b>Пешком:</b> примерно " + walkMin + " мин"
+                            )
+                            .openOn(MAP);
+                        // we cannot remove popup with removeLayer reliably, so track it
+                        window._sperren_highlights.push(popup);
 
-                            // show popup exactly on street (nearest point)
-                            var popup = L.popup({maxWidth:400})
-                                .setLatLng(nearPt)
-                                .setContent(
-                                    "<b>Ближайшая улица:</b> " + (bestStreet.name || "—") +
-                                    "<br><b>Расстояние:</b> " + meters + " м" +
-                                    "<br><b>Пешком:</b> примерно " + walkMin + " мин"
-                                )
-                                .openOn(MAP);
-                            window._sperren_highlights.push(popup);
+                        // add and show user marker
+                        var userMarker = L.circleMarker(user,{radius:6,color:"#333",fillColor:"#fff",weight:2}).addTo(MAP);
+                        userMarker.bindPopup("Вы здесь");
+                        userMarker.openPopup();
+                        window._sperren_highlights.push(userMarker);
 
-                            // add and show user marker
-                            var userMarker = L.circleMarker(user,{radius:6,color:"#333",fillColor:"#fff",weight:2}).addTo(MAP);
-                            userMarker.bindPopup("Вы здесь");
-                            window._sperren_highlights.push(userMarker);
-                            userMarker.openPopup();
-
-                            // centre map to the nearest point on street
-                            MAP.flyTo(nearPt, 17);
-                        } catch (e) {
-                            console.error("Error showing nearest street:", e);
-                            alert("Произошла ошибка при отображении ближайшей улицы. Откройте консоль для деталей.");
-                        }
+                        // centre map to the nearest point on street
+                        MAP.flyTo(nearPt, 17);
 
                     }, function(err) {
                         alert("Ошибка геопозиции: " + err.message);
@@ -216,8 +210,8 @@
 <script>
     
     
-            var map_6e391ce178965b1da9d566aa19936e3b = L.map(
-                "map_6e391ce178965b1da9d566aa19936e3b",
+            var map_bab023a13d1f3f77b275ff91b1d7c119 = L.map(
+                "map_bab023a13d1f3f77b275ff91b1d7c119",
                 {
                     center: [51.2562, 7.1508],
                     crs: L.CRS.EPSG3857,
@@ -234,7 +228,7 @@
 
         
     
-            var tile_layer_1fa0bc3b64852fc60fe1c96fabe79cb0 = L.tileLayer(
+            var tile_layer_ca2a28c127592b9015274452c94cc996 = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
   "minZoom": 0,
@@ -251,66 +245,66 @@
             );
         
     
-            tile_layer_1fa0bc3b64852fc60fe1c96fabe79cb0.addTo(map_6e391ce178965b1da9d566aa19936e3b);
+            tile_layer_ca2a28c127592b9015274452c94cc996.addTo(map_bab023a13d1f3f77b275ff91b1d7c119);
         
     
-            var marker_9d05d62cff5708fd1144cbd7f6ab3ea2 = L.marker(
+            var marker_dbae5aa1acf7876e1fa4d2edebe7c336 = L.marker(
                 [51.2677505, 7.2106403],
                 {
 }
-            ).addTo(map_6e391ce178965b1da9d566aa19936e3b);
+            ).addTo(map_bab023a13d1f3f77b275ff91b1d7c119);
         
     
-        var popup_76b0dcb6d09da94e4d3c3ba7ce2a4223 = L.popup({
+        var popup_f63b6e6a722cc2b97a36278afd51f4ef = L.popup({
   "maxWidth": "100%",
 });
 
         
             
-                var html_7a7095e5da81e98adcd53c709f6af7d6 = $(`<div id="html_7a7095e5da81e98adcd53c709f6af7d6" style="width: 100.0%; height: 100.0%;">Albertstr</div>`)[0];
-                popup_76b0dcb6d09da94e4d3c3ba7ce2a4223.setContent(html_7a7095e5da81e98adcd53c709f6af7d6);
+                var html_d06a6f0a05a6856e4d2fdccad2163ec6 = $(`<div id="html_d06a6f0a05a6856e4d2fdccad2163ec6" style="width: 100.0%; height: 100.0%;">Albertstr</div>`)[0];
+                popup_f63b6e6a722cc2b97a36278afd51f4ef.setContent(html_d06a6f0a05a6856e4d2fdccad2163ec6);
             
         
 
-        marker_9d05d62cff5708fd1144cbd7f6ab3ea2.bindPopup(popup_76b0dcb6d09da94e4d3c3ba7ce2a4223)
+        marker_dbae5aa1acf7876e1fa4d2edebe7c336.bindPopup(popup_f63b6e6a722cc2b97a36278afd51f4ef)
         ;
 
         
     
     
-            var marker_347b81fe6142bb3f11bb621e0a669290 = L.marker(
+            var marker_d358d1e01267c49106ea19c5f4e0a9df = L.marker(
                 [51.2497094, 7.1478419],
                 {
 }
-            ).addTo(map_6e391ce178965b1da9d566aa19936e3b);
+            ).addTo(map_bab023a13d1f3f77b275ff91b1d7c119);
         
     
-        var popup_25c94497e146f95de807df4e2a6f0399 = L.popup({
+        var popup_6b0466ec30cfe704e1a98ea6eedb6130 = L.popup({
   "maxWidth": "100%",
 });
 
         
             
-                var html_6fa391b0100d47afa98c1b4aa0d07059 = $(`<div id="html_6fa391b0100d47afa98c1b4aa0d07059" style="width: 100.0%; height: 100.0%;">Holzer str</div>`)[0];
-                popup_25c94497e146f95de807df4e2a6f0399.setContent(html_6fa391b0100d47afa98c1b4aa0d07059);
+                var html_53fc61e944a3ceec6179072a987fa9e9 = $(`<div id="html_53fc61e944a3ceec6179072a987fa9e9" style="width: 100.0%; height: 100.0%;">Holzer str</div>`)[0];
+                popup_6b0466ec30cfe704e1a98ea6eedb6130.setContent(html_53fc61e944a3ceec6179072a987fa9e9);
             
         
 
-        marker_347b81fe6142bb3f11bb621e0a669290.bindPopup(popup_25c94497e146f95de807df4e2a6f0399)
+        marker_d358d1e01267c49106ea19c5f4e0a9df.bindPopup(popup_6b0466ec30cfe704e1a98ea6eedb6130)
         ;
 
         
     
     
-            map_6e391ce178965b1da9d566aa19936e3b.fitBounds(
+            map_bab023a13d1f3f77b275ff91b1d7c119.fitBounds(
                 [[51.2677505, 7.2106403], [51.2497094, 7.1478419]],
                 {}
             );
         
     
-            var locate_control_47d985862656ecb0dbfbe06a02105c8f = L.control.locate(
+            var locate_control_0abd132e2ffa7d9c53511cd6bf3cb1e6 = L.control.locate(
                 {}
-            ).addTo(map_6e391ce178965b1da9d566aa19936e3b);
+            ).addTo(map_bab023a13d1f3f77b275ff91b1d7c119);
             
         
 </script>
