@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_bab023a13d1f3f77b275ff91b1d7c119 {
+                #map_08d462dd38e081581089601fde02d87b {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -56,162 +56,140 @@
 <body>
     
     
-            <div class="folium-map" id="map_bab023a13d1f3f77b275ff91b1d7c119" ></div>
+            <div class="folium-map" id="map_08d462dd38e081581089601fde02d87b" ></div>
         
 
         <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            try {
-                window.MAP = map_bab023a13d1f3f77b275ff91b1d7c119;
-                var STREETS = JSON.parse('[{"name": "point_0", "coords": [[51.2677505, 7.2106403]]}, {"name": "point_1", "coords": [[51.2497094, 7.1478419]]}]');
+document.addEventListener("DOMContentLoaded", function() {
+    try {
+        window.MAP = map_08d462dd38e081581089601fde02d87b;
+        var STREETS = JSON.parse('[{"name": "Roseggerstraße", "coords": [[51.2685075, 7.2254057], [51.2682439, 7.2244025], [51.2680357, 7.2236169], [51.2671162, 7.221063], [51.267422, 7.2219137], [51.2679432, 7.2233612], [51.2680357, 7.2236169], [51.2671162, 7.221063], [51.2670355, 7.2208266], [51.2669977, 7.2207148], [51.2669109, 7.2204629], [51.2668522, 7.2202954], [51.2668519, 7.2202459], [51.2668584, 7.2202049], [51.2669805, 7.220023], [51.2670124, 7.2199601], [51.2670339, 7.2198897], [51.267043, 7.2198167], [51.2670555, 7.2196667], [51.2671261, 7.2196456], [51.2671965, 7.2193854], [51.2672536, 7.2188865], [51.2671663, 7.2191762]]}]');
 
-                function haversine_m(a,b) {
-                    var R = 6371000;
-                    var φ1 = a[0]*Math.PI/180, φ2 = b[0]*Math.PI/180;
-                    var dφ = (b[0]-a[0])*Math.PI/180;
-                    var dλ = (b[1]-a[1])*Math.PI/180;
-                    var sa = Math.sin(dφ/2)*Math.sin(dφ/2) + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)*Math.sin(dλ/2);
-                    var c = 2*Math.atan2(Math.sqrt(sa), Math.sqrt(1-sa));
-                    return R*c;
-                }
+        function haversine_m(a,b) {
+            var R = 6371000;
+            var φ1 = a[0]*Math.PI/180, φ2 = b[0]*Math.PI/180;
+            var dφ = (b[0]-a[0])*Math.PI/180;
+            var dλ = (b[1]-a[1])*Math.PI/180;
+            var sa = Math.sin(dφ/2)*Math.sin(dφ/2) + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)*Math.sin(dλ/2);
+            var c = 2*Math.atan2(Math.sqrt(sa), Math.sqrt(1-sa));
+            return R*c;
+        }
 
-                function closestPointOnSegment(p, a, b) {
-                    var latScale = Math.cos((p[0]) * Math.PI/180);
-                    var ax = a[0], ay = a[1]*latScale;
-                    var bx = b[0], by = b[1]*latScale;
-                    var px = p[0], py = p[1]*latScale;
-                    var vx = bx - ax, vy = by - ay;
-                    var wx = px - ax, wy = py - ay;
-                    var vlen2 = vx*vx + vy*vy;
-                    if (vlen2 === 0) return a.slice();
-                    var t = (vx*wx + vy*wy) / vlen2;
-                    if (t < 0) t = 0;
-                    if (t > 1) t = 1;
-                    var cx = ax + vx*t;
-                    var cy = ay + vy*t;
-                    return [cx, cy/latScale];
-                }
+        function closestPointOnSegment(p, a, b) {
+            var latScale = Math.cos((p[0]) * Math.PI/180);
+            var ax = a[0], ay = a[1]*latScale;
+            var bx = b[0], by = b[1]*latScale;
+            var px = p[0], py = p[1]*latScale;
+            var vx = bx - ax, vy = by - ay;
+            var wx = px - ax, wy = py - ay;
+            var vlen2 = vx*vx + vy*vy;
+            if (vlen2 === 0) return a.slice();
+            var t = (vx*wx + vy*wy) / vlen2;
+            if (t < 0) t = 0;
+            if (t > 1) t = 1;
+            var cx = ax + vx*t;
+            var cy = ay + vy*t;
+            return [cx, cy/latScale];
+        }
 
-                function nearestPointOnPolyline(p, coords) {
-                    if (!coords || coords.length === 0) return null;
-                    var best = null;
-                    var bestDist = Infinity;
-                    if (coords.length === 1) {
-                        return {point: coords[0], dist: haversine_m(p, coords[0])};
-                    }
-                    for (var i=0;i<coords.length-1;i++) {
-                        var a = coords[i], b = coords[i+1];
-                        var c = closestPointOnSegment(p, a, b);
-                        var d = haversine_m(p, c);
-                        if (d < bestDist) {
-                            bestDist = d;
-                            best = {point: c, dist: d};
-                        }
-                    }
-                    return best;
-                }
-
-                function showNearestStreet() {
-                    if(!navigator.geolocation) {
-                        alert("Геолокация не поддерживается");
-                        return;
-                    }
-
-                    navigator.geolocation.getCurrentPosition(function(pos) {
-                        var user = [pos.coords.latitude, pos.coords.longitude];
-
-                        var bestStreet = null;
-                        var bestInfo = null;
-
-                        for (var si=0; si<STREETS.length; si++) {
-                            var st = STREETS[si];
-                            var coords = st.coords || [];
-                            if (!coords || coords.length === 0) continue;
-
-                            // flatten possible segments: coords can sometimes be [[seg1],[seg2],...]
-                            var flat;
-                            if (Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
-                                flat = [];
-                                for (var s = 0; s < coords.length; s++) flat = flat.concat(coords[s]);
-                            } else {
-                                flat = coords;
-                            }
-                            if (flat.length === 0) continue;
-
-                            var info = nearestPointOnPolyline(user, flat);
-                            if (!info) continue;
-                            if (!bestInfo || info.dist < bestInfo.dist) {
-                                bestInfo = info;
-                                bestStreet = {name: st.name, coords: flat};
-                            }
-                        }
-
-                        if (!bestStreet || !bestInfo) {
-                            alert("Не удалось найти ближайшую улицу");
-                            return;
-                        }
-
-                        // remove previous highlights (popup and user marker)
-                        if (!window._sperren_highlights) window._sperren_highlights = [];
-                        window._sperren_highlights.forEach(function(l){ try { MAP.removeLayer(l); } catch(e) {} });
-                        window._sperren_highlights = [];
-
-                        // nearest point on street
-                        var nearPt = bestInfo.point;
-                        var meters = Math.round(bestInfo.dist);
-                        var walkMin = Math.max(1, Math.round((meters/1000)/5*60)); // 5 km/h
-
-                        // show popup exactly on that point (ON the street)
-                        var popup = L.popup({maxWidth:400})
-                            .setLatLng(nearPt)
-                            .setContent(
-                                "<b>Ближайшая улица:</b> " + (bestStreet.name || "—") +
-                                "<br><b>Расстояние:</b> " + meters + " м" +
-                                "<br><b>Пешком:</b> примерно " + walkMin + " мин"
-                            )
-                            .openOn(MAP);
-                        // we cannot remove popup with removeLayer reliably, so track it
-                        window._sperren_highlights.push(popup);
-
-                        // add and show user marker
-                        var userMarker = L.circleMarker(user,{radius:6,color:"#333",fillColor:"#fff",weight:2}).addTo(MAP);
-                        userMarker.bindPopup("Вы здесь");
-                        userMarker.openPopup();
-                        window._sperren_highlights.push(userMarker);
-
-                        // centre map to the nearest point on street
-                        MAP.flyTo(nearPt, 17);
-
-                    }, function(err) {
-                        alert("Ошибка геопозиции: " + err.message);
-                    }, {enableHighAccuracy:true, timeout:10000, maximumAge:0});
-                }
-
-                var btn = document.createElement("button");
-                btn.textContent = "Показать ближайшую улицу ко мне";
-                btn.style.position = "absolute";
-                btn.style.top = "10px";
-                btn.style.left = "50%";
-                btn.style.transform = "translateX(-50%)";
-                btn.style.zIndex = 99999;
-                btn.style.padding = "8px 12px";
-                btn.style.background = "white";
-                btn.style.border = "1px solid #888";
-                btn.style.borderRadius = "6px";
-                btn.onclick = showNearestStreet;
-                document.body.appendChild(btn);
-
-            } catch (e) {
-                console.error("Initialization error in map script:", e);
+        function nearestPointOnPolyline(p, coords) {
+            if (!coords || coords.length === 0) return null;
+            var best = null;
+            var bestDist = Infinity;
+            if (coords.length === 1) {
+                return {point: coords[0], dist: haversine_m(p, coords[0])};
             }
-        });
-        </script>
+            for (var i=0;i<coords.length-1;i++) {
+                var a = coords[i], b = coords[i+1];
+                var c = closestPointOnSegment(p, a, b);
+                var d = haversine_m(p, c);
+                if (d < bestDist) {
+                    bestDist = d;
+                    best = {point: c, dist: d};
+                }
+            }
+            return best;
+        }
+
+        function showNearestStreet() {
+            if(!navigator.geolocation) {
+                alert("Геолокация не поддерживается");
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                var user = [pos.coords.latitude, pos.coords.longitude];
+
+                var bestStreet = null;
+                var bestInfo = null;
+
+                for (var si=0; si<STREETS.length; si++) {
+                    var st = STREETS[si];
+                    var coords = st.coords || [];
+                    if (!coords || coords.length === 0) continue;
+                    var flat = Array.isArray(coords[0][0]) ? coords.flat() : coords;
+
+                    var info = nearestPointOnPolyline(user, flat);
+                    if (!info) continue;
+                    if (!bestInfo || info.dist < bestInfo.dist) {
+                        bestInfo = info;
+                        bestStreet = {name: st.name, coords: flat};
+                    }
+                }
+
+                if (!bestStreet || !bestInfo) {
+                    alert("Не удалось найти ближайшую улицу");
+                    return;
+                }
+
+                var nearPt = bestInfo.point;
+                var meters = Math.round(bestInfo.dist);
+                var walkMin = Math.max(1, Math.round((meters/1000)/5*60));
+
+                // показываем попап на ближайшей точке (НЕ рисуем улицу)
+                L.marker(nearPt).addTo(MAP).bindPopup(
+                    "Ближайшая улица: <b>"+bestStreet.name+
+                    "</b><br>Расстояние: "+meters+" м"+
+                    "<br>Пешком: примерно "+walkMin+" мин"
+                ).openPopup();
+
+                // маркер пользователя
+                var userMarker = L.circleMarker(user, {radius:6,color:"#333",fillColor:"#fff",weight:2}).addTo(MAP);
+                userMarker.bindPopup("Вы здесь").openPopup();
+
+                MAP.flyTo(nearPt, 17);
+
+            }, function(err) {
+                alert("Ошибка геопозиции: " + err.message);
+            }, {enableHighAccuracy:true, timeout:10000, maximumAge:0});
+        }
+
+        var btn = document.createElement("button");
+        btn.textContent = "Показать ближайшую улицу ко мне";
+        btn.style.position = "absolute";
+        btn.style.top = "10px";
+        btn.style.left = "50%";
+        btn.style.transform = "translateX(-50%)";
+        btn.style.zIndex = 99999;
+        btn.style.padding = "8px 12px";
+        btn.style.background = "white";
+        btn.style.border = "1px solid #888";
+        btn.style.borderRadius = "6px";
+        btn.onclick = showNearestStreet;
+        document.body.appendChild(btn);
+
+    } catch (e) {
+        console.error("Initialization error in map script:", e);
+    }
+});
+</script>
+
         </body>
 <script>
     
     
-            var map_bab023a13d1f3f77b275ff91b1d7c119 = L.map(
-                "map_bab023a13d1f3f77b275ff91b1d7c119",
+            var map_08d462dd38e081581089601fde02d87b = L.map(
+                "map_08d462dd38e081581089601fde02d87b",
                 {
                     center: [51.2562, 7.1508],
                     crs: L.CRS.EPSG3857,
@@ -228,7 +206,7 @@
 
         
     
-            var tile_layer_ca2a28c127592b9015274452c94cc996 = L.tileLayer(
+            var tile_layer_9ff674adf59d370b2fc03ee5e728b1bd = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
   "minZoom": 0,
@@ -245,66 +223,90 @@
             );
         
     
-            tile_layer_ca2a28c127592b9015274452c94cc996.addTo(map_bab023a13d1f3f77b275ff91b1d7c119);
+            tile_layer_9ff674adf59d370b2fc03ee5e728b1bd.addTo(map_08d462dd38e081581089601fde02d87b);
         
     
-            var marker_dbae5aa1acf7876e1fa4d2edebe7c336 = L.marker(
+            var marker_cce0a4c54d61eb052a2728161126ccc7 = L.marker(
                 [51.2677505, 7.2106403],
                 {
 }
-            ).addTo(map_bab023a13d1f3f77b275ff91b1d7c119);
+            ).addTo(map_08d462dd38e081581089601fde02d87b);
         
     
-        var popup_f63b6e6a722cc2b97a36278afd51f4ef = L.popup({
+        var popup_0a047241fc10088a3209c4c3dd87df11 = L.popup({
   "maxWidth": "100%",
 });
 
         
             
-                var html_d06a6f0a05a6856e4d2fdccad2163ec6 = $(`<div id="html_d06a6f0a05a6856e4d2fdccad2163ec6" style="width: 100.0%; height: 100.0%;">Albertstr</div>`)[0];
-                popup_f63b6e6a722cc2b97a36278afd51f4ef.setContent(html_d06a6f0a05a6856e4d2fdccad2163ec6);
+                var html_1b51d6e3fc735b55d47fc9c0626ec1e9 = $(`<div id="html_1b51d6e3fc735b55d47fc9c0626ec1e9" style="width: 100.0%; height: 100.0%;">Albertstr</div>`)[0];
+                popup_0a047241fc10088a3209c4c3dd87df11.setContent(html_1b51d6e3fc735b55d47fc9c0626ec1e9);
             
         
 
-        marker_dbae5aa1acf7876e1fa4d2edebe7c336.bindPopup(popup_f63b6e6a722cc2b97a36278afd51f4ef)
+        marker_cce0a4c54d61eb052a2728161126ccc7.bindPopup(popup_0a047241fc10088a3209c4c3dd87df11)
         ;
 
         
     
     
-            var marker_d358d1e01267c49106ea19c5f4e0a9df = L.marker(
+            var marker_8d289ff1289230d75dc76bde6e01b474 = L.marker(
                 [51.2497094, 7.1478419],
                 {
 }
-            ).addTo(map_bab023a13d1f3f77b275ff91b1d7c119);
+            ).addTo(map_08d462dd38e081581089601fde02d87b);
         
     
-        var popup_6b0466ec30cfe704e1a98ea6eedb6130 = L.popup({
+        var popup_a4d243f2dc1a210f00bc22c6e8847fe1 = L.popup({
   "maxWidth": "100%",
 });
 
         
             
-                var html_53fc61e944a3ceec6179072a987fa9e9 = $(`<div id="html_53fc61e944a3ceec6179072a987fa9e9" style="width: 100.0%; height: 100.0%;">Holzer str</div>`)[0];
-                popup_6b0466ec30cfe704e1a98ea6eedb6130.setContent(html_53fc61e944a3ceec6179072a987fa9e9);
+                var html_da51cf7702c395c035b7b14fe8ab8575 = $(`<div id="html_da51cf7702c395c035b7b14fe8ab8575" style="width: 100.0%; height: 100.0%;">Holzer str</div>`)[0];
+                popup_a4d243f2dc1a210f00bc22c6e8847fe1.setContent(html_da51cf7702c395c035b7b14fe8ab8575);
             
         
 
-        marker_d358d1e01267c49106ea19c5f4e0a9df.bindPopup(popup_6b0466ec30cfe704e1a98ea6eedb6130)
+        marker_8d289ff1289230d75dc76bde6e01b474.bindPopup(popup_a4d243f2dc1a210f00bc22c6e8847fe1)
         ;
 
         
     
     
-            map_bab023a13d1f3f77b275ff91b1d7c119.fitBounds(
-                [[51.2677505, 7.2106403], [51.2497094, 7.1478419]],
+            var marker_e248858c25e38fa325ef6b56582fa793 = L.marker(
+                [51.2682724, 7.2245111],
+                {
+}
+            ).addTo(map_08d462dd38e081581089601fde02d87b);
+        
+    
+        var popup_43f1b9821697ea5f67cd26d231969cbf = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_e4c4734f2daeb93b5b3a26bb51612152 = $(`<div id="html_e4c4734f2daeb93b5b3a26bb51612152" style="width: 100.0%; height: 100.0%;">Roseggerstraße</div>`)[0];
+                popup_43f1b9821697ea5f67cd26d231969cbf.setContent(html_e4c4734f2daeb93b5b3a26bb51612152);
+            
+        
+
+        marker_e248858c25e38fa325ef6b56582fa793.bindPopup(popup_43f1b9821697ea5f67cd26d231969cbf)
+        ;
+
+        
+    
+    
+            map_08d462dd38e081581089601fde02d87b.fitBounds(
+                [[51.2677505, 7.2106403], [51.2497094, 7.1478419], [51.2682724, 7.2245111]],
                 {}
             );
         
     
-            var locate_control_0abd132e2ffa7d9c53511cd6bf3cb1e6 = L.control.locate(
+            var locate_control_4d12bd7519f843fa7988db92b6cf0240 = L.control.locate(
                 {}
-            ).addTo(map_bab023a13d1f3f77b275ff91b1d7c119);
+            ).addTo(map_08d462dd38e081581089601fde02d87b);
             
         
 </script>
