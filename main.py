@@ -483,8 +483,47 @@ async def fetch_and_parse(session, url, data, street, current_month,
                                                            title="Sperrmüll"):
                         # сохраняем целую улицу
                         found_addresses.append(street)
+        else:
+            # ищем все варианты похожих улиц
+            similar_links = soup.select('a[href*="streetname"]')
+            for link in similar_links:
+                street_text = link.get_text(strip=True)
 
+                # сравнение нормализованное, чтобы исключить ошибки регистра и пробелов
+                if normalize_street_name(street_text) == normalize_street_name(
+                        street):
+                    full_link = urljoin(url, link.get('href'))
+
+                    # скачиваем страницу с реальной улицей
+                    exact_page = await safe_request(
+                        session,
+                        "GET",
+                        full_link,
+                        rate_limiter,
+                        timeout=aiohttp.ClientTimeout(total=15))
+
+                    if not exact_page:
+                        continue
+
+                    exact_soup = BeautifulSoup(exact_page, 'lxml')
+
+                    # повторяем стандартный парсинг
+                    for month_div in exact_soup.find_all('div',
+                                                         class_='month'):
+                        header = month_div.find(['h3', 'span'])
+                        if not header:
+                            continue
+                        if header.get_text(strip=True) != current_month:
+                            continue
+                        for td in month_div.find_all(
+                                'td', class_=['', 'holiday', 'exception']):
+                            day_text = ''.join(
+                                re.findall(r'\d+', td.get_text()))
+                            if day_text == current_day and td.find(
+                                    "i", title="Sperrmüll"):
+                                found_addresses.append(street)
         cache[key] = found_addresses if found_addresses else None
+
         return cache[key]
 
 
@@ -493,11 +532,14 @@ async def fetch_and_parse(session, url, data, street, current_month,
 
 def create_map_and_push(addresses, city, filename="map.html"):
     """
-            Создаёт карту:
-              - маркеры домов
-              - определяет ближайшую улицу ко мне
-              - показывает расстояние и примерное время пешком
-              - пушит в GH Pages (если GITHUB_TOKEN)
+        Создаёт карту:
+          - маркеры домов (Nominatim)
+          - собирает геометрию улиц через Overpass (не рисует заранее)
+          - кнопка "Показать ближайшую улицу ко мне" (находит ближайшую точку на полилинии,
+            показывает popup с названием, расстоянием (м) и примерным временем пешком)
+          - плавающая рекламная плашка с креативным дизайном (можно закрыть)
+          - пуш в GitHub Pages, если задан GITHUB_TOKEN
+        Важно: JS-шаблон вставляется безопасно (через маркеры), чтобы избежать проблем с { } в f-строках.
         """
     import os
     import json
@@ -505,30 +547,47 @@ def create_map_and_push(addresses, city, filename="map.html"):
     import subprocess
     import requests
     import folium
+    import re
     from datetime import datetime
     from geopy.geocoders import Nominatim
     from geopy.extra.rate_limiter import RateLimiter
     from folium.plugins import LocateControl
+    from typing import Optional
 
     logger = logging.getLogger("MAP")
     logger.setLevel(logging.INFO)
 
+    # Небольшая нормализация (пример). При необходимости подставь свою normalize_street_name
+    def normalize_street_name(name: Optional[str]) -> Optional[str]:
+        if not name:
+            return None
+        s = name.strip()
+        # пользовательская логика нормализации (упрощённая)
+        s = re.sub(r'\s+', ' ', s)
+        return s
+
+    # геокодер
     geolocator = Nominatim(user_agent="sperren_map_streets")
     geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
 
     fmap = folium.Map(location=[51.2562, 7.1508], zoom_start=12)
 
     geocoded_points = []
-    street_names = set()
+    geocoded_info = []
+    street_names_from_addresses = set()
     street_geometries = []
 
-    import re
+    # 1) Извлечём предполагаемые имена улиц из входных адресов
     for addr in addresses:
-        if isinstance(addr, str):
-            m = re.match(r"^(.*\D)\s+(\d[\dA-Za-z/-]*)\s*$", addr.strip())
-            street = m.group(1).strip() if m else addr.strip()
-            street_names.add(street)
+        if not isinstance(addr, str):
+            continue
+        m = re.match(r"^(.*\D)\s+(\d[\dA-Za-z/-]*)\s*$", addr.strip())
+        street_raw = (m.group(1).strip() if m else addr.strip())
+        st = normalize_street_name(street_raw)
+        if st:
+            street_names_from_addresses.add(st)
 
+    # 2) Геокодируем адреса, ставим маркеры и запоминаем имя улицы из ответа Nominatim (если есть)
     for addr in addresses:
         try:
             q = f"{addr}, {city}" if city else addr
@@ -538,163 +597,367 @@ def create_map_and_push(addresses, city, filename="map.html"):
             lat, lon = float(loc.latitude), float(loc.longitude)
             geocoded_points.append([lat, lon])
             folium.Marker([lat, lon], popup=addr).add_to(fmap)
-        except:
+
+            street_from_loc = loc.raw.get("address", {}).get("road")
+            geocoded_info.append({
+                "address": addr,
+                "lat": lat,
+                "lon": lon,
+                "street": street_from_loc
+            })
+            if street_from_loc:
+                street_names_from_addresses.add(
+                    normalize_street_name(street_from_loc))
+        except Exception:
+            # не ломаем всё из-за одного неудачного геокода
             continue
 
     if geocoded_points:
         fmap.fit_bounds(geocoded_points)
 
-    # Определяем координаты улиц
-    def overpass_query_for_street(name, city, timeout=25):
+    # Overpass helper — берём геометрию улицы, если доступна
+    def overpass_query_for_street(name, city_name, timeout=25):
         q = f"""
-                [out:json][timeout:{timeout}];
-                area["name"="{city}"]->.a;
-                (
-                  way["name"="{name}"](area.a);
-                  relation["name"="{name}"](area.a);
-                );
-                out geom;
-                """
+            [out:json][timeout:{timeout}];
+            area["name"="{city_name}"]->.a;
+            (
+              way["name"="{name}"](area.a);
+              relation["name"="{name}"](area.a);
+            );
+            out geom;
+            """
         try:
             r = requests.post("https://overpass-api.de/api/interpreter",
                               data=q.encode("utf-8"),
                               timeout=timeout)
             if r.status_code == 200:
                 return r.json()
-        except:
+        except Exception:
             pass
         return None
 
-    # Получаем геометрию улиц, но НЕ рисуем их
-    for street in sorted(street_names):
+    # 3) Собираем геометрии (coords) для каждой улицы (не рисуем их)
+    for street in sorted(street_names_from_addresses):
         try:
             data = overpass_query_for_street(street, city)
-            coords_collected = []
-
-            if data and data.get("elements"):
-                for e in data["elements"]:
-                    geom = e.get("geometry")
+            coords_all = []
+            if data and isinstance(data, dict) and data.get("elements"):
+                for el in data["elements"]:
+                    geom = el.get("geometry")
                     if not geom:
                         continue
-                    seg = [[p["lat"], p["lon"]] for p in geom]
+                    seg = [[float(p["lat"]), float(p["lon"])] for p in geom]
                     if seg:
-                        coords_collected.append(seg)
-
-            if coords_collected:
-                mid = coords_collected[0][len(coords_collected[0]) // 2]
+                        coords_all.extend(seg)
+            if coords_all:
+                # downsample при избыточном количестве точек
+                MAX_POINTS = 2000
+                if len(coords_all) > MAX_POINTS:
+                    step = max(1, len(coords_all) // MAX_POINTS)
+                    coords_all = coords_all[::step]
                 street_geometries.append({
                     "name": street,
-                    "coords": coords_collected[0],
-                    "mid": mid
+                    "coords": coords_all
                 })
+        except Exception:
+            continue
+
+    # fallback: если нет геометрий, используем уникальные пары street->coordinate из geocoded_info
+    if not street_geometries:
+        names_seen = set()
+        for gi in geocoded_info:
+            nm = normalize_street_name(gi.get("street") or gi.get("address"))
+            if not nm or nm in names_seen:
                 continue
-
-            loc = geolocator.geocode({"street": street, "city": city})
-            if loc:
-                lat, lon = float(loc.latitude), float(loc.longitude)
-                d = 0.00035
-                seg = [[lat - d, lon - d], [lat + d, lon + d]]
-                street_geometries.append({
-                    "name": street,
-                    "coords": seg,
-                    "mid": [lat, lon]
-                })
-
-        except:
-            pass
-
-    if geocoded_points and not street_geometries:
-        for p in geocoded_points:
+            names_seen.add(nm)
             street_geometries.append({
-                "name": "point",
-                "coords": [p],
-                "mid": p
+                "name": nm,
+                "coords": [[gi["lat"], gi["lon"]]]
             })
 
+        # крайний fallback — просто точки домов
+        if not street_geometries and geocoded_points:
+            for i, p in enumerate(geocoded_points):
+                street_geometries.append({"name": f"point_{i}", "coords": [p]})
+
+    # LocateControl
     try:
         LocateControl(auto_start=False).add_to(fmap)
-    except:
+    except Exception:
         pass
 
+    # сохраняем карту
     fmap.save(filename)
 
-    with open(filename, "r", encoding="utf-8") as f:
-        html = f.read()
+    # читаем html и подготавливаем JS вставку безопасно
+    with open(filename, "r", encoding="utf-8") as fh:
+        html_text = fh.read()
 
-    import re
-    map_var = re.findall(r"var (\w+) = L\.map", html)
-    map_var = map_var[0] if map_var else "map"
+    found = re.findall(r"var (\w+) = L\.map", html_text)
+    map_var = found[0] if found else None
 
-    js_streets = []
-    for s in street_geometries:
-        arr = s["coords"]
-        js_streets.append({"name": s["name"], "coords": arr, "mid": s["mid"]})
+    # безопасно сериализуем данные улиц (экранируем "</")
+    streets_json = json.dumps(street_geometries,
+                              ensure_ascii=False).replace("</", "<\\/")
 
-    # ✅ Добавлен расчёт времени пешком
-    inject_js = f"""
+    # JS-шаблон с уникальными маркерами <<<MAP>>> и <<<STREETS>>> (никаких f-строк с JS-скобками)
+    js_template = """
         <script>
-        document.addEventListener("DOMContentLoaded", function() {{
-            window.MAP = {map_var};
-            var STREETS = {json.dumps(js_streets)};
+        document.addEventListener("DOMContentLoaded", function() {
+            try {
+                // MAP placeholder
+                var MAP = <<<MAP>>>;
+                if (!MAP) {
+                    // fallback: найти любой объект типа L.Map в window
+                    MAP = Object.values(window).find(function(v){ return v && v._leaflet_id && (v instanceof L.Map); });
+                }
+                if (!MAP) {
+                    console.error("Map object not found");
+                    return;
+                }
 
-            function meterDist(a,b){{
-                var R = 6371000;
-                var lat1=a[0]*Math.PI/180, lat2=b[0]*Math.PI/180;
-                var dLat=(b[0]-a[0])*Math.PI/180, dLon=(b[1]-a[1])*Math.PI/180;
-                var s=Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
-                return 2*R*Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
-            }}
+                var STREETS = JSON.parse('<<<STREETS>>>');
 
-            function showNearestStreet() {{
-                if(!navigator.geolocation) return alert("Геолокация не поддерживается");
-                navigator.geolocation.getCurrentPosition(function(pos){{
-                    var user=[pos.coords.latitude, pos.coords.longitude];
-                    var best=null, bestDist=Infinity;
+                function haversine_m(a,b) {
+                    var R = 6371000;
+                    var φ1 = a[0]*Math.PI/180, φ2 = b[0]*Math.PI/180;
+                    var dφ = (b[0]-a[0])*Math.PI/180;
+                    var dλ = (b[1]-a[1])*Math.PI/180;
+                    var sa = Math.sin(dφ/2)*Math.sin(dφ/2) + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)*Math.sin(dλ/2);
+                    var c = 2*Math.atan2(Math.sqrt(sa), Math.sqrt(1-sa));
+                    return R*c;
+                }
 
-                    STREETS.forEach(s => {{
-                        if(!s.mid) return;
-                        var d=meterDist(user, s.mid);
-                        if(d<bestDist) {{ bestDist=d; best=s; }}
-                    }});
+                function closestPointOnSegment(p, a, b) {
+                    var latScale = Math.cos(p[0]*Math.PI/180);
+                    var ax=a[0], ay=a[1]*latScale;
+                    var bx=b[0], by=b[1]*latScale;
+                    var px=p[0], py=p[1]*latScale;
+                    var vx=bx-ax, vy=by-ay;
+                    var wx=px-ax, wy=py-ay;
+                    var vlen2 = vx*vx + vy*vy;
+                    if (!vlen2) return a.slice();
+                    var t = Math.max(0, Math.min(1, (vx*wx + vy*wy)/vlen2));
+                    var cx = ax + vx*t, cy = ay + vy*t;
+                    return [cx, cy/latScale];
+                }
 
-                    if(!best) return alert("Не удалось найти ближайшую улицу");
+                function nearestPointOnPolyline(p, coords) {
+                    if (!coords || coords.length === 0) return null;
+                    if (coords.length === 1) return {point: coords[0], dist: haversine_m(p, coords[0])};
+                    var best = null, bestDist = Infinity;
+                    for (var i=0;i<coords.length-1;i++){
+                        var a = coords[i], b = coords[i+1];
+                        var c = closestPointOnSegment(p, a, b);
+                        var d = haversine_m(p, c);
+                        if (d < bestDist) { bestDist = d; best = {point: c, dist: d}; }
+                    }
+                    return best;
+                }
 
-                    // ✅ Время пешком
-                    var walkTimeSec = bestDist / 1.4;
-                    var walkMin = Math.max(1, Math.round(walkTimeSec / 60));
+                function showNearestStreet() {
+                    if (!navigator.geolocation) { alert("Геолокация не поддерживается"); return; }
+                    navigator.geolocation.getCurrentPosition(function(pos) {
+                        var user = [pos.coords.latitude, pos.coords.longitude];
+                        var bestStreet = null, bestInfo = null;
 
-                    L.marker(best.mid).addTo(MAP).bindPopup(
-                        "Улица: <b>"+best.name+
-                        "</b><br>Расстояние: "+Math.round(bestDist)+" м"+
-                        "<br>Пешком примерно: "+walkMin+" мин."
-                    ).openPopup();
+                        for (var si=0; si<STREETS.length; si++) {
+                            var st = STREETS[si];
+                            var coords = st.coords || [];
+                            if (!coords || coords.length === 0) continue;
+                            // flatten segments if needed
+                            var flat = (Array.isArray(coords[0]) && Array.isArray(coords[0][0])) ? coords.flat() : coords;
+                            if (flat.length === 0) continue;
+                            var info = nearestPointOnPolyline(user, flat);
+                            if (!info) continue;
+                            if (!bestInfo || info.dist < bestInfo.dist) {
+                                bestInfo = info;
+                                bestStreet = {name: st.name, coords: flat};
+                            }
+                        }
 
-                    L.circleMarker(user, {{radius:6,color:'#000',fillColor:'#fff',weight:2}}).addTo(MAP).bindPopup("Вы здесь");
-                    MAP.flyTo(best.mid, 16);
-                }}, err => alert("Ошибка геопозиции: "+err.message), {{enableHighAccuracy:true}});
-            }}
+                        if (!bestStreet || !bestInfo) { alert("Не удалось найти ближайшую улицу"); return; }
 
-            var b=document.createElement("button");
-            b.textContent="Показать ближайшую улицу ко мне";
-            b.style.position="absolute"; b.style.top="10px"; b.style.left="50%";
-            b.style.transform="translateX(-50%)";
-            b.style.zIndex=999999; b.style.padding="8px 12px";
-            b.style.background="white"; b.style.border="1px solid #666";
-            b.style.borderRadius="6px";
-            b.onclick=showNearestStreet;
-            document.body.appendChild(b);
-        }});
+                        var nearPt = bestInfo.point;
+                        var meters = Math.round(bestInfo.dist);
+                        var walkMin = Math.max(1, Math.round((meters/1000)/5*60)); // 5 km/h
+
+                        // очистка предыдущих маркеров
+                        if (!window.__sperren_marks) window.__sperren_marks = [];
+                        window.__sperren_marks.forEach(function(l){ try{ MAP.removeLayer(l); } catch(e){} });
+                        window.__sperren_marks = [];
+
+                        // flyTo и открытие popup после небольшого таймаута, чтобы карта успела центрироваться
+                        MAP.flyTo(nearPt, 17);
+                        setTimeout(function(){
+                            var m = L.marker(nearPt).addTo(MAP);
+                            m.bindPopup(
+                                "<div style='font-family:Arial,Helvetica,sans-serif; font-size:14px;'><b>Ближайшая улица:</b> " + (bestStreet.name || "—") +
+                                "<br><b>Расстояние:</b> " + meters + " м" +
+                                "<br><b>Пешком:</b> примерно " + walkMin + " мин</div>"
+                            ).openPopup();
+                            window.__sperren_marks.push(m);
+                        }, 600);
+
+                        // маркер пользователя (не открываем popup чтобы не закрыть предыдущий)
+                        var um = L.circleMarker(user, {radius:6, color:'#333', fillColor:'#fff', weight:2}).addTo(MAP);
+                        um.bindPopup("Вы здесь");
+                        window.__sperren_marks.push(um);
+
+                    }, function(err) {
+                        alert("Ошибка геопозиции: " + err.message);
+                    }, {enableHighAccuracy:true, timeout:10000, maximumAge:0});
+                }
+
+                // --- Кнопка (с небольшим стилем) ---
+                var btn = document.createElement("button");
+                btn.textContent = "Показать ближайшую улицу ко мне";
+                btn.style.position = "absolute";
+                btn.style.top = "12px";
+                btn.style.left = "50%";
+                btn.style.transform = "translateX(-50%)";
+                btn.style.zIndex = 1000;
+                btn.style.padding = "8px 14px";
+                btn.style.background = "#ffffff";
+                btn.style.border = "1px solid rgba(0,0,0,0.15)";
+                btn.style.borderRadius = "8px";
+                btn.style.boxShadow = "0 2px 6px rgba(0,0,0,0.08)";
+                btn.style.fontFamily = "Arial, Helvetica, sans-serif";
+                btn.style.cursor = "pointer";
+                btn.onclick = showNearestStreet;
+                document.body.appendChild(btn);
+
+                // ==== Плавающий рекламный блок (креативный дизайн) ====
+                var adWrap = document.createElement("div");
+                adWrap.id = "__sperren_ad";
+                adWrap.style.position = "fixed";
+                adWrap.style.bottom = "22px";
+                adWrap.style.right = "22px";
+                adWrap.style.zIndex = 99999;
+                adWrap.style.width = "260px";
+                adWrap.style.maxWidth = "calc(100% - 44px)";
+                adWrap.style.boxSizing = "border-box";
+                adWrap.style.fontFamily = "Inter, Arial, Helvetica, sans-serif";
+                adWrap.style.transition = "transform 0.24s ease, opacity 0.2s ease";
+                adWrap.style.boxShadow = "0 10px 30px rgba(0,0,0,0.12)";
+                adWrap.style.borderRadius = "12px";
+                adWrap.style.overflow = "hidden";
+                adWrap.style.background = "linear-gradient(180deg,#ffffff,#fbfbff)";
+
+                // inner content
+                var adInner = document.createElement("div");
+                adInner.style.padding = "12px";
+                adInner.style.display = "flex";
+                adInner.style.gap = "10px";
+                adInner.style.alignItems = "center";
+
+                // left: logo / icon
+                var adIcon = document.createElement("div");
+                adIcon.src = "https://routefromhome-collab.github.io/sperren-map/logo.jpg"; 
+                adIcon.style.width = "48px";
+                adIcon.style.height = "48px";
+                adIcon.style.borderRadius = "10px";
+                adIcon.style.flex = "0 0 48px";
+                adIcon.style.objectFit = "cover";
+                adIcon.style.display = "flex";
+                adIcon.style.alignItems = "center";
+                adIcon.style.justifyContent = "center";
+                
+                adIcon.style.color = "#fff";
+                adIcon.style.fontWeight = "700";
+                adIcon.style.fontSize = "20px";
+                
+
+                // center: text
+                var adTextWrap = document.createElement("div");
+                adTextWrap.style.flex = "1 1 auto";
+                adTextWrap.innerHTML = "<div style='font-size:15px; font-weight:700; color:#111; line-height:1.05;'>⚡ Карта от Schwebezeit</div>" +
+                                       "<div style='font-size:13px; color:#444; margin-top:4px;'>Лучший канал — подпишись в Telegram</div>";
+
+                // right: CTA
+                var adCTA = document.createElement("div");
+                adCTA.style.flex = "0 0 auto";
+                var ctaBtn = document.createElement("button");
+                ctaBtn.textContent = "Перейти";
+                ctaBtn.style.background = "#1d72ff";
+                ctaBtn.style.color = "#fff";
+                ctaBtn.style.border = "none";
+                ctaBtn.style.padding = "8px 10px";
+                ctaBtn.style.borderRadius = "8px";
+                ctaBtn.style.cursor = "pointer";
+                ctaBtn.style.fontWeight = "700";
+                ctaBtn.onclick = function(e){ e.stopPropagation(); window.open('https://t.me/schwebezeit','_blank'); };
+                adCTA.appendChild(ctaBtn);
+
+                adInner.appendChild(adIcon);
+                adInner.appendChild(adTextWrap);
+                adInner.appendChild(adCTA);
+
+                // top-right close button
+                var closeBtn = document.createElement("button");
+                closeBtn.innerHTML = "✕";
+                closeBtn.style.position = "absolute";
+                closeBtn.style.top = "6px";
+                closeBtn.style.right = "8px";
+                closeBtn.style.width = "28px";
+                closeBtn.style.height = "28px";
+                closeBtn.style.border = "none";
+                closeBtn.style.background = "transparent";
+                closeBtn.style.color = "#666";
+                closeBtn.style.cursor = "pointer";
+                closeBtn.style.fontSize = "14px";
+                closeBtn.onclick = function(e){ e.stopPropagation(); adWrap.style.transform = 'translateY(16px) scale(0.98)'; adWrap.style.opacity='0'; setTimeout(function(){ try{ adWrap.remove(); }catch(e){} },220); };
+
+                adWrap.appendChild(adInner);
+                adWrap.appendChild(closeBtn);
+
+                // small footer (powered by)
+                var adFooter = document.createElement("div");
+                adFooter.style.padding = "8px 12px";
+                adFooter.style.fontSize = "11px";
+                adFooter.style.color = "#666";
+                adFooter.style.background = "rgba(0,0,0,0.02)";
+                adFooter.style.textAlign = "center";
+                adFooter.innerHTML = "Поддержка проекта — <a href='https://t.me/schwebezeit' target='_blank' style='color:#1d72ff;text-decoration:none;'>Schwebezeit</a>";
+                adFooter.onclick = function(e){ e.stopPropagation(); window.open('https://t.me/schwebezeit','_blank'); };
+
+                // append footer to wrap
+                adWrap.appendChild(adFooter);
+
+                // click on whole card opens channel
+                adWrap.onclick = function(){ window.open('https://t.me/schwebezeit','_blank'); };
+
+                document.body.appendChild(adWrap);
+                // === end ad block ===
+
+            } catch (err) {
+                console.error("MAP script init error:", err);
+            }
+        });
         </script>
-        </body>
         """
 
-    html = html.replace("</body>", inject_js)
-    with open(filename, "w", encoding="utf-8") as f:
-        f.write(html)
+    # безопасная замена маркеров: сначала MAP (если map_var найден) — вставляем JS-выражение, иначе null
+    map_token = map_var if map_var else "null"
+    # STREETS вставляем как строку, иначе JSON внутри JS может сломать HTML
+    streets_token = streets_json.replace("'", "\\'").replace("\n", "\\n")
 
-    # GitHub push
+    inject_js = js_template.replace("<<<MAP>>>",
+                                    map_token).replace("<<<STREETS>>>",
+                                                       streets_token)
+
+    # вставляем перед </body>
+    if "</body>" in html_text:
+        html_text = html_text.replace("</body>", inject_js + "</body>")
+    else:
+        html_text = html_text + inject_js
+
+    with open(filename, "w", encoding="utf-8") as fh:
+        fh.write(html_text)
+
+    # push to GitHub Pages если задан токен
     if not os.getenv("GITHUB_TOKEN"):
-        print("Карта сохранена локально:", filename)
+        logger.info("NO GITHUB_TOKEN — saved locally: %s", filename)
         return filename
 
     TOKEN = os.getenv("GITHUB_TOKEN")
@@ -704,28 +967,32 @@ def create_map_and_push(addresses, city, filename="map.html"):
 
     try:
         subprocess.run(
-            ["git", "config", "--global", "user.email", "bot@example.com"])
-        subprocess.run(["git", "config", "--global", "user.name", "MapBot"])
+            ["git", "config", "--global", "user.email", "bot@example.com"],
+            check=False)
+        subprocess.run(["git", "config", "--global", "user.name", "MapBot"],
+                       check=False)
         subprocess.run(
-            ["git", "pull", "--rebase", "--autostash", repo_url, BRANCH])
-        subprocess.run(["git", "add", filename])
+            ["git", "pull", "--rebase", "--autostash", repo_url, BRANCH],
+            check=False)
+        subprocess.run(["git", "add", "."], check=False)
         subprocess.run([
             "git", "commit", "-m", f"Update map {datetime.now().isoformat()}"
-        ])
-        subprocess.run(["git", "push", repo_url, BRANCH])
+        ],
+                       check=False)
+        subprocess.run(["git", "push", repo_url, BRANCH], check=False)
     except Exception as e:
-        print("Git push failed:", e)
+        logger.warning("Git push failed: %s", e)
 
-    url = f"https://routefromhome-collab.github.io/sperren-map/{filename}"
-    print("Map available:", url)
-    return url
+    public_url = f"https://routefromhome-collab.github.io/sperren-map/{filename}"
+    logger.info("Map available: %s", public_url)
+    return public_url
 
 
 # ------- Основной поток парсинга -------
 async def start_parsing(application: Application):
     bot = application.bot
 
-    target_date = datetime.strptime("18 November 2025", "%d %B %Y")
+    target_date = datetime.strptime("1 December 2025", "%d %B %Y")
     month_translation = {
         "January": "Januar",
         "February": "Februar",
@@ -744,6 +1011,7 @@ async def start_parsing(application: Application):
     # read streets
     streets_df = pd.read_excel('2.xlsx', engine='openpyxl')
     streets = streets_df["STRNAME"].str.rstrip('.').to_list()
+    #streets = ["Bachstr"]
     city = "Wuppertal"
     url = 'https://awg-wuppertal.de/privatkunden/abfallkalender.html'
 
@@ -910,6 +1178,31 @@ async def main():
 
 
 if __name__ == '__main__':
+
+    # ✅ Проверяем, есть ли тестовый файл
+    if os.path.exists("addresses.json"):
+        try:
+            with open("addresses.json", "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            city = data.get("city", "")
+            addresses = data.get("addresses", [])
+
+            if addresses:
+                print(
+                    "📌 Найден addresses.json — создаём карту без запуска парсера..."
+                )
+                result = create_map_and_push(addresses, city, "debug_map.html")
+                print("✅ Карта создана:", result)
+                sys.exit()  # ✅ выходим, main() НЕ выполняется
+            else:
+                print("⚠️ В addresses.json нет поля addresses")
+
+        except Exception as e:
+            print("❌ Ошибка чтения addresses.json:", e)
+
+    # ✅ если адресов нет — запускаем обычный парсинг
     if sys.platform.startswith("win"):
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     asyncio.run(main())
