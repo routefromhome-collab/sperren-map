@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_7c14a4232664da7f06fa4c7c879c9cf6 {
+                #map_e1c6b1b344ff2a0e50149188d8f8c4d4 {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -56,248 +56,248 @@
 <body>
     
     
-            <div class="folium-map" id="map_7c14a4232664da7f06fa4c7c879c9cf6" ></div>
+            <div class="folium-map" id="map_e1c6b1b344ff2a0e50149188d8f8c4d4" ></div>
         
 
-            <script>
-            document.addEventListener("DOMContentLoaded", function() {
-                try {
-                    var MAP = null;
-                    MAP = map_7c14a4232664da7f06fa4c7c879c9cf6;
-                    if (!MAP) {
-                        MAP = Object.values(window).find(v => v && v._leaflet_id && v instanceof L.Map);
+        <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            try {
+                var MAP = null;
+                MAP = map_e1c6b1b344ff2a0e50149188d8f8c4d4;
+                if (!MAP) {
+                    MAP = Object.values(window).find(v => v && v._leaflet_id && v instanceof L.Map);
+                }
+                if (!MAP) {
+                    console.error("Map not found");
+                    return;
+                }
+
+                var STREETS = [{"name": "lindenallee", "coords": [[51.8339586, 10.7948087]]}, {"name": "am hofe", "coords": [[51.2230597, 7.2646666]]}];
+
+                function haversine_m(a,b) {
+                    var R = 6371000;
+                    var φ1 = a[0]*Math.PI/180, φ2 = b[0]*Math.PI/180;
+                    var dφ = (b[0]-a[0])*Math.PI/180;
+                    var dλ = (b[1]-a[1])*Math.PI/180;
+                    var sa = Math.sin(dφ/2)*Math.sin(dφ/2) + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)*Math.sin(dλ/2);
+                    var c = 2*Math.atan2(Math.sqrt(sa), Math.sqrt(1-sa));
+                    return R*c;
+                }
+
+                function closestPointOnSegment(p, a, b) {
+                    var latScale = Math.cos(p[0]*Math.PI/180);
+                    var ax=a[0], ay=a[1]*latScale;
+                    var bx=b[0], by=b[1]*latScale;
+                    var px=p[0], py=p[1]*latScale;
+                    var vx=bx-ax, vy=by-ay;
+                    var wx=px-ax, wy=py-ay;
+                    var vlen2 = vx*vx + vy*vy;
+                    if (vlen2===0) return a.slice();
+                    var t = (vx*wx + vy*wy) / vlen2;
+                    t = Math.max(0, Math.min(1,t));
+                    var cx=ax+vx*t, cy=ay+vy*t;
+                    return [cx, cy/latScale];
+                }
+
+                function nearestPointOnPolyline(p, coords) {
+                    if (!coords || coords.length===0) return null;
+                    var best=null, bestDist=Infinity;
+                    if (coords.length===1) {
+                        return {point:coords[0], dist:haversine_m(p,coords[0])};
                     }
-                    if (!MAP) {
-                        console.error("Map not found");
+                    for (var i=0;i<coords.length-1;i++) {
+                        var a=coords[i], b=coords[i+1];
+                        var c=closestPointOnSegment(p,a,b);
+                        var d=haversine_m(p,c);
+                        if (d<bestDist) {
+                            bestDist=d;
+                            best={point:c,dist:d};
+                        }
+                    }
+                    return best;
+                }
+
+                function showNearestStreet() {
+                    if (!navigator.geolocation) {
+                        alert("Геолокация не поддерживается");
                         return;
                     }
+                    navigator.geolocation.getCurrentPosition(function(pos) {
+                        var user=[pos.coords.latitude,pos.coords.longitude];
+                        var bestStreet=null, bestInfo=null;
 
-                    var STREETS = [{"name": "ludgerweg", "coords": [[51.2202873, 7.0519903]]}, {"name": "grüner kamp", "coords": [[51.2182649, 7.0547426]]}, {"name": "lindenallee", "coords": [[51.2795748, 7.1637808]]}, {"name": "am hofe", "coords": [[51.2230597, 7.2646666]]}];
-
-                    function haversine_m(a,b) {
-                        var R = 6371000;
-                        var φ1 = a[0]*Math.PI/180, φ2 = b[0]*Math.PI/180;
-                        var dφ = (b[0]-a[0])*Math.PI/180;
-                        var dλ = (b[1]-a[1])*Math.PI/180;
-                        var sa = Math.sin(dφ/2)*Math.sin(dφ/2) + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)*Math.sin(dλ/2);
-                        var c = 2*Math.atan2(Math.sqrt(sa), Math.sqrt(1-sa));
-                        return R*c;
-                    }
-
-                    function closestPointOnSegment(p, a, b) {
-                        var latScale = Math.cos(p[0]*Math.PI/180);
-                        var ax=a[0], ay=a[1]*latScale;
-                        var bx=b[0], by=b[1]*latScale;
-                        var px=p[0], py=p[1]*latScale;
-                        var vx=bx-ax, vy=by-ay;
-                        var wx=px-ax, wy=py-ay;
-                        var vlen2 = vx*vx + vy*vy;
-                        if (vlen2===0) return a.slice();
-                        var t = (vx*wx + vy*wy) / vlen2;
-                        t = Math.max(0, Math.min(1,t));
-                        var cx=ax+vx*t, cy=ay+vy*t;
-                        return [cx, cy/latScale];
-                    }
-
-                    function nearestPointOnPolyline(p, coords) {
-                        if (!coords || coords.length===0) return null;
-                        var best=null, bestDist=Infinity;
-                        if (coords.length===1) {
-                            return {point:coords[0], dist:haversine_m(p,coords[0])};
-                        }
-                        for (var i=0;i<coords.length-1;i++) {
-                            var a=coords[i], b=coords[i+1];
-                            var c=closestPointOnSegment(p,a,b);
-                            var d=haversine_m(p,c);
-                            if (d<bestDist) {
-                                bestDist=d;
-                                best={point:c,dist:d};
+                        for (var si=0;si<STREETS.length;si++) {
+                            var st=STREETS[si];
+                            var coords=st.coords||[];
+                            if (!coords.length) continue;
+                            var flat=(Array.isArray(coords[0]) && Array.isArray(coords[0][0]))? coords.flat():coords;
+                            var info=nearestPointOnPolyline(user,flat);
+                            if (!info) continue;
+                            if (!bestInfo || info.dist<bestInfo.dist) {
+                                bestInfo=info;
+                                bestStreet={name:st.name, coords:flat};
                             }
                         }
-                        return best;
-                    }
 
-                    function showNearestStreet() {
-                        if (!navigator.geolocation) {
-                            alert("Геолокация не поддерживается");
+                        if (!bestStreet || !bestInfo) {
+                            alert("Не удалось найти ближайшую улицу");
                             return;
                         }
-                        navigator.geolocation.getCurrentPosition(function(pos) {
-                            var user=[pos.coords.latitude,pos.coords.longitude];
-                            var bestStreet=null, bestInfo=null;
 
-                            for (var si=0;si<STREETS.length;si++) {
-                                var st=STREETS[si];
-                                var coords=st.coords||[];
-                                if (!coords.length) continue;
-                                var flat=(Array.isArray(coords[0]) && Array.isArray(coords[0][0]))? coords.flat():coords;
-                                var info=nearestPointOnPolyline(user,flat);
-                                if (!info) continue;
-                                if (!bestInfo || info.dist<bestInfo.dist) {
-                                    bestInfo=info;
-                                    bestStreet={name:st.name, coords:flat};
-                                }
-                            }
+                        var nearPt=bestInfo.point;
+                        var meters=Math.round(bestInfo.dist);
+                        var walkMin=Math.max(1, Math.round((meters/1000)/5*60));
 
-                            if (!bestStreet || !bestInfo) {
-                                alert("Не удалось найти ближайшую улицу");
-                                return;
-                            }
+                        MAP.flyTo(nearPt,17);
 
-                            var nearPt=bestInfo.point;
-                            var meters=Math.round(bestInfo.dist);
-                            var walkMin=Math.max(1, Math.round((meters/1000)/5*60));
+                        if (!window._marks) window._marks=[];
+                        window._marks.forEach(function(l){ try { MAP.removeLayer(l); } catch(e){} });
+                        window._marks=[];
 
-                            MAP.flyTo(nearPt,17);
+                        setTimeout(function(){
+                            var m=L.marker(nearPt).addTo(MAP);
+                            m.bindPopup(
+                                "Ближайшая улица: <b>"+(bestStreet.name||"—")+"</b><br>"+
+                                "Расстояние: "+meters+" м<br>"+
+                                "Пешком: примерно "+walkMin+" мин"
+                            ).openPopup();
+                            window._marks.push(m);
+                        },650);
 
-                            if (!window._marks) window._marks=[];
-                            window._marks.forEach(function(l){ try { MAP.removeLayer(l); } catch(e){} });
-                            window._marks=[];
+                        var um=L.circleMarker(user,{radius:6,color:'#333',fillColor:'#fff',weight:2}).addTo(MAP);
+                        um.bindPopup("Вы здесь");
+                        window._marks.push(um);
 
-                            setTimeout(function(){
-                                var m=L.marker(nearPt).addTo(MAP);
-                                m.bindPopup(
-                                    "Ближайшая улица: <b>"+(bestStreet.name||"—")+"</b><br>"+
-                                    "Расстояние: "+meters+" м<br>"+
-                                    "Пешком: примерно "+walkMin+" мин"
-                                ).openPopup();
-                                window._marks.push(m);
-                            },650);
-
-                            var um=L.circleMarker(user,{radius:6,color:'#333',fillColor:'#fff',weight:2}).addTo(MAP);
-                            um.bindPopup("Вы здесь");
-                            window._marks.push(um);
-
-                        },function(err){ alert("Ошибка геопозиции: "+err.message); },
-                        {enableHighAccuracy:true,timeout:10000,maximumAge:0});
-                    }
-
-                    var btn=document.createElement("button");
-                    btn.textContent="Показать ближайшую улицу ко мне";
-                    btn.style.position="absolute";
-                    btn.style.top="10px";
-                    btn.style.left="50%";
-                    btn.style.transform="translateX(-50%)";
-                    btn.style.zIndex=1000;
-                    btn.style.padding="8px 12px";
-                    btn.style.background="white";
-                    btn.style.border="1px solid #888";
-                    btn.style.borderRadius="6px";
-                    btn.onclick=showNearestStreet;
-                    document.body.appendChild(btn);
-                     // ==== Плавающий рекламный блок (креативный дизайн) ====
-                    var adWrap = document.createElement("div");
-                    adWrap.id = "__sperren_ad";
-                    adWrap.style.position = "fixed";
-                    adWrap.style.bottom = "22px";
-                    adWrap.style.right = "22px";
-                    adWrap.style.zIndex = 99999;
-                    adWrap.style.width = "260px";
-                    adWrap.style.maxWidth = "calc(100% - 44px)";
-                    adWrap.style.boxSizing = "border-box";
-                    adWrap.style.fontFamily = "Inter, Arial, Helvetica, sans-serif";
-                    adWrap.style.transition = "transform 0.24s ease, opacity 0.2s ease";
-                    adWrap.style.boxShadow = "0 10px 30px rgba(0,0,0,0.12)";
-                    adWrap.style.borderRadius = "12px";
-                    adWrap.style.overflow = "hidden";
-                    adWrap.style.background = "linear-gradient(180deg,#ffffff,#fbfbff)";
-
-                    // inner content
-                    var adInner = document.createElement("div");
-                    adInner.style.padding = "12px";
-                    adInner.style.display = "flex";
-                    adInner.style.gap = "10px";
-                    adInner.style.alignItems = "center";
-
-                    // left: logo / icon
-                    var adIcon = document.createElement("div");
-                    adIcon.style.width = "48px";
-                    adIcon.style.height = "48px";
-                    adIcon.style.borderRadius = "10px";
-                    adIcon.style.flex = "0 0 48px";
-                    adIcon.style.backgroundImage = "url('https://routefromhome-collab.github.io/sperren-map/logo.jpg')";
-                    adIcon.style.backgroundSize = "cover";
-                    adIcon.style.backgroundPosition = "center";
-                    adIcon.style.display = "flex";
-                    adIcon.style.alignItems = "center";
-                    adIcon.style.justifyContent = "center";
-
-                    adIcon.style.color = "#fff";
-                    adIcon.style.fontWeight = "700";
-                    adIcon.style.fontSize = "20px";
-
-
-                    // center: text
-                    var adTextWrap = document.createElement("div");
-                    adTextWrap.style.flex = "1 1 auto";
-                    adTextWrap.innerHTML = "<div style='font-size:15px; font-weight:700; color:#111; line-height:1.05;'>⚡Карта от канала Schwebezeit</div>" +
-                                           "<div style='font-size:13px; color:#444; margin-top:4px;'>Лучший канал — подпишись в Telegram</div>";
-
-                    // right: CTA
-                    var adCTA = document.createElement("div");
-                    adCTA.style.flex = "0 0 auto";
-                    var ctaBtn = document.createElement("button");
-                    ctaBtn.textContent = "Перейти";
-                    ctaBtn.style.background = "#1d72ff";
-                    ctaBtn.style.color = "#fff";
-                    ctaBtn.style.border = "none";
-                    ctaBtn.style.padding = "8px 10px";
-                    ctaBtn.style.borderRadius = "8px";
-                    ctaBtn.style.cursor = "pointer";
-                    ctaBtn.style.fontWeight = "700";
-                    ctaBtn.onclick = function(e){ e.stopPropagation(); window.open('https://t.me/schwebezeit','_blank'); };
-                    adCTA.appendChild(ctaBtn);
-
-                    adInner.appendChild(adIcon);
-                    adInner.appendChild(adTextWrap);
-                    adInner.appendChild(adCTA);
-
-                    // top-right close button
-                    var closeBtn = document.createElement("button");
-                    closeBtn.innerHTML = "✕";
-                    closeBtn.style.position = "absolute";
-                    closeBtn.style.top = "6px";
-                    closeBtn.style.right = "8px";
-                    closeBtn.style.width = "28px";
-                    closeBtn.style.height = "28px";
-                    closeBtn.style.border = "none";
-                    closeBtn.style.background = "transparent";
-                    closeBtn.style.color = "#666";
-                    closeBtn.style.cursor = "pointer";
-                    closeBtn.style.fontSize = "14px";
-                    closeBtn.onclick = function(e){ e.stopPropagation(); adWrap.style.transform = 'translateY(16px) scale(0.98)'; adWrap.style.opacity='0'; setTimeout(function(){ try{ adWrap.remove(); }catch(e){} },220); };
-
-                    adWrap.appendChild(adInner);
-                    adWrap.appendChild(closeBtn);
-
-                    // small footer (powered by)
-                    var adFooter = document.createElement("div");
-                    adFooter.style.padding = "8px 12px";
-                    adFooter.style.fontSize = "11px";
-                    adFooter.style.color = "#666";
-                    adFooter.style.background = "rgba(0,0,0,0.02)";
-                    adFooter.style.textAlign = "center";
-                    adFooter.innerHTML = "Поддержка проекта — <a href='https://t.me/schwebezeit' target='_blank' style='color:#1d72ff;text-decoration:none;'>Schwebezeit</a>";
-                    adFooter.onclick = function(e){ e.stopPropagation(); window.open('https://t.me/schwebezeit','_blank'); };
-
-                    // append footer to wrap
-                    adWrap.appendChild(adFooter);
-
-                    // click on whole card opens channel
-                    adWrap.onclick = function(){ window.open('https://t.me/schwebezeit','_blank'); };
-
-                    document.body.appendChild(adWrap);
-                } catch(e) {
-                    console.error("MAP init error:",e);
+                    },function(err){ alert("Ошибка геопозиции: "+err.message); },
+                    {enableHighAccuracy:true,timeout:10000,maximumAge:0});
                 }
-            });
-            </script>
-            </body>
+
+                var btn=document.createElement("button");
+                btn.textContent="Показать ближайшую улицу ко мне";
+                btn.style.position="absolute";
+                btn.style.top="10px";
+                btn.style.left="50%";
+                btn.style.transform="translateX(-50%)";
+                btn.style.zIndex=1000;
+                btn.style.padding="8px 12px";
+                btn.style.background="white";
+                btn.style.border="1px solid #888";
+                btn.style.borderRadius="6px";
+                btn.onclick=showNearestStreet;
+                document.body.appendChild(btn);
+                 // ==== Плавающий рекламный блок (креативный дизайн) ====
+                var adWrap = document.createElement("div");
+                adWrap.id = "__sperren_ad";
+                adWrap.style.position = "fixed";
+                adWrap.style.bottom = "22px";
+                adWrap.style.right = "22px";
+                adWrap.style.zIndex = 99999;
+                adWrap.style.width = "260px";
+                adWrap.style.maxWidth = "calc(100% - 44px)";
+                adWrap.style.boxSizing = "border-box";
+                adWrap.style.fontFamily = "Inter, Arial, Helvetica, sans-serif";
+                adWrap.style.transition = "transform 0.24s ease, opacity 0.2s ease";
+                adWrap.style.boxShadow = "0 10px 30px rgba(0,0,0,0.12)";
+                adWrap.style.borderRadius = "12px";
+                adWrap.style.overflow = "hidden";
+                adWrap.style.background = "linear-gradient(180deg,#ffffff,#fbfbff)";
+
+                // inner content
+                var adInner = document.createElement("div");
+                adInner.style.padding = "12px";
+                adInner.style.display = "flex";
+                adInner.style.gap = "10px";
+                adInner.style.alignItems = "center";
+
+                // left: logo / icon
+                var adIcon = document.createElement("div");
+                adIcon.style.width = "48px";
+                adIcon.style.height = "48px";
+                adIcon.style.borderRadius = "10px";
+                adIcon.style.flex = "0 0 48px";
+                adIcon.style.backgroundImage = "url('https://routefromhome-collab.github.io/sperren-map/logo.jpg')";
+                adIcon.style.backgroundSize = "cover";
+                adIcon.style.backgroundPosition = "center";
+                adIcon.style.display = "flex";
+                adIcon.style.alignItems = "center";
+                adIcon.style.justifyContent = "center";
+
+                adIcon.style.color = "#fff";
+                adIcon.style.fontWeight = "700";
+                adIcon.style.fontSize = "20px";
+
+
+                // center: text
+                var adTextWrap = document.createElement("div");
+                adTextWrap.style.flex = "1 1 auto";
+                adTextWrap.innerHTML = "<div style='font-size:15px; font-weight:700; color:#111; line-height:1.05;'>⚡Карта от канала Schwebezeit</div>" +
+                                       "<div style='font-size:13px; color:#444; margin-top:4px;'>Лучший канал — подпишись в Telegram</div>";
+
+                // right: CTA
+                var adCTA = document.createElement("div");
+                adCTA.style.flex = "0 0 auto";
+                var ctaBtn = document.createElement("button");
+                ctaBtn.textContent = "Перейти";
+                ctaBtn.style.background = "#1d72ff";
+                ctaBtn.style.color = "#fff";
+                ctaBtn.style.border = "none";
+                ctaBtn.style.padding = "8px 10px";
+                ctaBtn.style.borderRadius = "8px";
+                ctaBtn.style.cursor = "pointer";
+                ctaBtn.style.fontWeight = "700";
+                ctaBtn.onclick = function(e){ e.stopPropagation(); window.open('https://t.me/schwebezeit','_blank'); };
+                adCTA.appendChild(ctaBtn);
+
+                adInner.appendChild(adIcon);
+                adInner.appendChild(adTextWrap);
+                adInner.appendChild(adCTA);
+
+                // top-right close button
+                var closeBtn = document.createElement("button");
+                closeBtn.innerHTML = "✕";
+                closeBtn.style.position = "absolute";
+                closeBtn.style.top = "6px";
+                closeBtn.style.right = "8px";
+                closeBtn.style.width = "28px";
+                closeBtn.style.height = "28px";
+                closeBtn.style.border = "none";
+                closeBtn.style.background = "transparent";
+                closeBtn.style.color = "#666";
+                closeBtn.style.cursor = "pointer";
+                closeBtn.style.fontSize = "14px";
+                closeBtn.onclick = function(e){ e.stopPropagation(); adWrap.style.transform = 'translateY(16px) scale(0.98)'; adWrap.style.opacity='0'; setTimeout(function(){ try{ adWrap.remove(); }catch(e){} },220); };
+
+                adWrap.appendChild(adInner);
+                adWrap.appendChild(closeBtn);
+
+                // small footer (powered by)
+                var adFooter = document.createElement("div");
+                adFooter.style.padding = "8px 12px";
+                adFooter.style.fontSize = "11px";
+                adFooter.style.color = "#666";
+                adFooter.style.background = "rgba(0,0,0,0.02)";
+                adFooter.style.textAlign = "center";
+                adFooter.innerHTML = "Поддержка проекта — <a href='https://t.me/schwebezeit' target='_blank' style='color:#1d72ff;text-decoration:none;'>Schwebezeit</a>";
+                adFooter.onclick = function(e){ e.stopPropagation(); window.open('https://t.me/schwebezeit','_blank'); };
+
+                // append footer to wrap
+                adWrap.appendChild(adFooter);
+
+                // click on whole card opens channel
+                adWrap.onclick = function(){ window.open('https://t.me/schwebezeit','_blank'); };
+
+                document.body.appendChild(adWrap);
+            } catch(e) {
+                console.error("MAP init error:",e);
+            }
+        });
+        </script>
+        </body>
 <script>
     
     
-            var map_7c14a4232664da7f06fa4c7c879c9cf6 = L.map(
-                "map_7c14a4232664da7f06fa4c7c879c9cf6",
+            var map_e1c6b1b344ff2a0e50149188d8f8c4d4 = L.map(
+                "map_e1c6b1b344ff2a0e50149188d8f8c4d4",
                 {
                     center: [51.2562, 7.1508],
                     crs: L.CRS.EPSG3857,
@@ -314,7 +314,7 @@
 
         
     
-            var tile_layer_5464e5ce946aba79b024032008ffb39b = L.tileLayer(
+            var tile_layer_a0f325c819855e5a5ebd0a5c6aee9b8a = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
   "minZoom": 0,
@@ -331,114 +331,66 @@
             );
         
     
-            tile_layer_5464e5ce946aba79b024032008ffb39b.addTo(map_7c14a4232664da7f06fa4c7c879c9cf6);
+            tile_layer_a0f325c819855e5a5ebd0a5c6aee9b8a.addTo(map_e1c6b1b344ff2a0e50149188d8f8c4d4);
         
     
-            var marker_0af28ed22bc72b0d7ae9da383bc05514 = L.marker(
-                [51.2202873, 7.0519903],
+            var marker_1e8f2df9ee23ddc1b9343b22d444c53c = L.marker(
+                [51.8339586, 10.7948087],
                 {
 }
-            ).addTo(map_7c14a4232664da7f06fa4c7c879c9cf6);
+            ).addTo(map_e1c6b1b344ff2a0e50149188d8f8c4d4);
         
     
-        var popup_f6434c2c2de03026a06aeb2f9f9454e3 = L.popup({
+        var popup_479858d85a882125ed52fdf3b5038206 = L.popup({
   "maxWidth": "100%",
 });
 
         
             
-                var html_961a6e533f6da44d7aa0512ec3c47075 = $(`<div id="html_961a6e533f6da44d7aa0512ec3c47075" style="width: 100.0%; height: 100.0%;">Ludgerweg</div>`)[0];
-                popup_f6434c2c2de03026a06aeb2f9f9454e3.setContent(html_961a6e533f6da44d7aa0512ec3c47075);
+                var html_b6d8daf0ed562fff16c4f67433432c10 = $(`<div id="html_b6d8daf0ed562fff16c4f67433432c10" style="width: 100.0%; height: 100.0%;">Lindenallee</div>`)[0];
+                popup_479858d85a882125ed52fdf3b5038206.setContent(html_b6d8daf0ed562fff16c4f67433432c10);
             
         
 
-        marker_0af28ed22bc72b0d7ae9da383bc05514.bindPopup(popup_f6434c2c2de03026a06aeb2f9f9454e3)
+        marker_1e8f2df9ee23ddc1b9343b22d444c53c.bindPopup(popup_479858d85a882125ed52fdf3b5038206)
         ;
 
         
     
     
-            var marker_06ce9d012e168e80f6f26735cf8ec9ab = L.marker(
-                [51.2182649, 7.0547426],
-                {
-}
-            ).addTo(map_7c14a4232664da7f06fa4c7c879c9cf6);
-        
-    
-        var popup_e8b0a8516c6777183a59f403c2b070eb = L.popup({
-  "maxWidth": "100%",
-});
-
-        
-            
-                var html_871e425234664c2dcd2d37ec2c10e5d7 = $(`<div id="html_871e425234664c2dcd2d37ec2c10e5d7" style="width: 100.0%; height: 100.0%;">Grüner Kamp</div>`)[0];
-                popup_e8b0a8516c6777183a59f403c2b070eb.setContent(html_871e425234664c2dcd2d37ec2c10e5d7);
-            
-        
-
-        marker_06ce9d012e168e80f6f26735cf8ec9ab.bindPopup(popup_e8b0a8516c6777183a59f403c2b070eb)
-        ;
-
-        
-    
-    
-            var marker_482c920dc063ae3a187b53d37f886428 = L.marker(
-                [51.2795748, 7.1637808],
-                {
-}
-            ).addTo(map_7c14a4232664da7f06fa4c7c879c9cf6);
-        
-    
-        var popup_c780d708be2527ed952060636752eabc = L.popup({
-  "maxWidth": "100%",
-});
-
-        
-            
-                var html_f7753a777114ed6d5f708e24a194f7ec = $(`<div id="html_f7753a777114ed6d5f708e24a194f7ec" style="width: 100.0%; height: 100.0%;">Lindenallee</div>`)[0];
-                popup_c780d708be2527ed952060636752eabc.setContent(html_f7753a777114ed6d5f708e24a194f7ec);
-            
-        
-
-        marker_482c920dc063ae3a187b53d37f886428.bindPopup(popup_c780d708be2527ed952060636752eabc)
-        ;
-
-        
-    
-    
-            var marker_6f8466095517432b0ef19f24f88024e0 = L.marker(
+            var marker_1c95634dd6a57691d5300fb906b175f1 = L.marker(
                 [51.2230597, 7.2646666],
                 {
 }
-            ).addTo(map_7c14a4232664da7f06fa4c7c879c9cf6);
+            ).addTo(map_e1c6b1b344ff2a0e50149188d8f8c4d4);
         
     
-        var popup_a05dbed22ba1ff43471fbc2902277474 = L.popup({
+        var popup_cb1de52070c4f1e66a99538e6439f715 = L.popup({
   "maxWidth": "100%",
 });
 
         
             
-                var html_5af990b1534af3ce091e022d1c9c2234 = $(`<div id="html_5af990b1534af3ce091e022d1c9c2234" style="width: 100.0%; height: 100.0%;">Am Hofe</div>`)[0];
-                popup_a05dbed22ba1ff43471fbc2902277474.setContent(html_5af990b1534af3ce091e022d1c9c2234);
+                var html_78681b0d0704482e67bc90678b15a49d = $(`<div id="html_78681b0d0704482e67bc90678b15a49d" style="width: 100.0%; height: 100.0%;">Am Hofe</div>`)[0];
+                popup_cb1de52070c4f1e66a99538e6439f715.setContent(html_78681b0d0704482e67bc90678b15a49d);
             
         
 
-        marker_6f8466095517432b0ef19f24f88024e0.bindPopup(popup_a05dbed22ba1ff43471fbc2902277474)
+        marker_1c95634dd6a57691d5300fb906b175f1.bindPopup(popup_cb1de52070c4f1e66a99538e6439f715)
         ;
 
         
     
     
-            map_7c14a4232664da7f06fa4c7c879c9cf6.fitBounds(
-                [[51.2202873, 7.0519903], [51.2182649, 7.0547426], [51.2795748, 7.1637808], [51.2230597, 7.2646666]],
+            map_e1c6b1b344ff2a0e50149188d8f8c4d4.fitBounds(
+                [[51.8339586, 10.7948087], [51.2230597, 7.2646666]],
                 {}
             );
         
     
-            var locate_control_678022a2df31798207bf0b7aab2a7372 = L.control.locate(
+            var locate_control_4698e7994bb981f8b7f63f335a942d69 = L.control.locate(
                 {}
-            ).addTo(map_7c14a4232664da7f06fa4c7c879c9cf6);
+            ).addTo(map_e1c6b1b344ff2a0e50149188d8f8c4d4);
             
         
 </script>
