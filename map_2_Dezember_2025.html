@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_e757db35bbae2305256daef316912cfd {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.1.0/leaflet.markercluster.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.1.0/MarkerCluster.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.1.0/MarkerCluster.Default.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-locatecontrol/0.66.2/L.Control.Locate.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-locatecontrol/0.66.2/L.Control.Locate.min.css"/>
+</head>
+<body>
+    
+    
+            <div class="folium-map" id="map_e757db35bbae2305256daef316912cfd" ></div>
+        
+
+        <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            try {
+                var MAP = null;
+                MAP = map_e757db35bbae2305256daef316912cfd;
+                if (!MAP) {
+                    MAP = Object.values(window).find(v => v && v._leaflet_id && v instanceof L.Map);
+                }
+                if (!MAP) {
+                    console.error("Map not found");
+                    return;
+                }
+
+                var STREETS = [{"name": "untere bergerheide", "coords": [[51.2674726, 7.1076456]]}, {"name": "hosfelds katernberg", "coords": [[51.2695596, 7.113229]]}, {"name": "mittlere bergerheide", "coords": [[51.268442, 7.108854]]}, {"name": "richard-seel-weg", "coords": [[51.2700872, 7.1106105]]}, {"name": "in den birken", "coords": [[51.2744857, 7.1149653]]}, {"name": "falkenberg", "coords": [[51.2650439, 7.1116711]]}, {"name": "obere bergerheide", "coords": [[51.2686116, 7.1069892]]}, {"name": "am acker", "coords": [[51.2731096, 7.1174283]]}, {"name": "herberts katernberg", "coords": [[51.2719337, 7.113528]]}, {"name": "beeker winkel", "coords": [[51.2667247, 7.1071181]]}, {"name": "katernberger schulweg", "coords": [[51.2714549, 7.1220588]]}, {"name": "august-jung-weg", "coords": [[51.268132, 7.1186994]]}, {"name": "schuckertstraße", "coords": [[51.2707415, 7.1207374]]}];
+
+                function haversine_m(a,b) {
+                    var R = 6371000;
+                    var phi1 = a[0]*Math.PI/180, phi2 = b[0]*Math.PI/180;
+                    var dphi = (b[0]-a[0])*Math.PI/180;
+                    var dlambda = (b[1]-a[1])*Math.PI/180;
+                    var sa = Math.sin(dphi/2)*Math.sin(dphi/2) + Math.cos(phi1)*Math.cos(phi2)*Math.sin(dlambda/2)*Math.sin(dlambda/2);
+                    var c = 2*Math.atan2(Math.sqrt(sa), Math.sqrt(1-sa));
+                    return R*c;
+                }
+
+                function closestPointOnSegment(p, a, b) {
+                    var latScale = Math.cos(p[0]*Math.PI/180);
+                    var ax=a[0], ay=a[1]*latScale;
+                    var bx=b[0], by=b[1]*latScale;
+                    var px=p[0], py=p[1]*latScale;
+                    var vx=bx-ax, vy=by-ay;
+                    var wx=px-ax, wy=py-ay;
+                    var vlen2 = vx*vx + vy*vy;
+                    if (vlen2===0) return a.slice();
+                    var t = (vx*wx + vy*wy) / vlen2;
+                    t = Math.max(0, Math.min(1,t));
+                    var cx=ax+vx*t, cy=ay+vy*t;
+                    return [cx, cy/latScale];
+                }
+
+                function nearestPointOnPolyline(p, coords) {
+                    if (!coords || coords.length===0) return null;
+                    var best=null, bestDist=Infinity;
+                    if (coords.length===1) {
+                        return {point:coords[0], dist:haversine_m(p,coords[0])};
+                    }
+                    for (var i=0;i<coords.length-1;i++) {
+                        var a=coords[i], b=coords[i+1];
+                        var c=closestPointOnSegment(p,a,b);
+                        var d=haversine_m(p,c);
+                        if (d<bestDist) {
+                            bestDist=d;
+                            best={point:c,dist:d};
+                        }
+                    }
+                    return best;
+                }
+
+                function showNearestStreet() {
+                    if (!navigator.geolocation) {
+                        alert("Геолокация не поддерживается");
+                        return;
+                    }
+                    navigator.geolocation.getCurrentPosition(function(pos) {
+                        var user=[pos.coords.latitude,pos.coords.longitude];
+                        var bestStreet=null, bestInfo=null;
+
+                        for (var si=0;si<STREETS.length;si++) {
+                            var st=STREETS[si];
+                            var coords=st.coords||[];
+                            if (!coords.length) continue;
+                            var flat=(Array.isArray(coords[0]) && Array.isArray(coords[0][0]))? coords.flat():coords;
+                            var info=nearestPointOnPolyline(user,flat);
+                            if (!info) continue;
+                            if (!bestInfo || info.dist<bestInfo.dist) {
+                                bestInfo=info;
+                                bestStreet={name:st.name, coords:flat};
+                            }
+                        }
+
+                        if (!bestStreet || !bestInfo) {
+                            alert("Не удалось найти ближайшую улицу");
+                            return;
+                        }
+
+                        var nearPt=bestInfo.point;
+                        var meters=Math.round(bestInfo.dist);
+                        var walkMin=Math.max(1, Math.round((meters/1000)/5*60));
+
+                        // Try to find existing marker nearby and open its popup (preserve icon/color)
+                        var allMarkers = [];
+                        MAP.eachLayer(function(layer){
+                            try {
+                                if (layer instanceof L.Marker) {
+                                    allMarkers.push(layer);
+                                } else if (layer.eachLayer) {
+                                    layer.eachLayer(function(inner){
+                                        if (inner instanceof L.Marker) allMarkers.push(inner);
+                                    });
+                                }
+                            } catch(e){}
+                        });
+
+                        var bestMarker = null;
+                        var bestDist = Infinity;
+                        for (var i=0;i<allMarkers.length;i++) {
+                            try {
+                                var ll = allMarkers[i].getLatLng();
+                                var d = haversine_m(user, [ll.lat, ll.lng]);
+                                if (d < bestDist) {
+                                    bestDist = d;
+                                    bestMarker = allMarkers[i];
+                                }
+                            } catch(e){}
+                        }
+
+                        var ICON_USE_THRESHOLD_METERS = 20;
+                        if (!window._marks) window._marks=[];
+                        window._marks.forEach(function(l){ try { MAP.removeLayer(l); } catch(e){} });
+                        window._marks=[];
+    
+                        if (bestMarker && bestDist <= ICON_USE_THRESHOLD_METERS) {
+                            try {
+                                MAP.flyTo(bestMarker.getLatLng(), 17);
+                                if (bestMarker.openPopup) {
+                                    bestMarker.openPopup();
+                                } else {
+                                    var iconToUse = bestMarker.options && bestMarker.options.icon ? bestMarker.options.icon : null;
+                                    if (iconToUse) {
+                                        var m = L.marker(nearPt, {icon: iconToUse}).addTo(MAP);
+                                        m.bindPopup("Ближайшая улица: <b>"+(bestStreet.name||"—")+"</b><br>Расстояние: "+meters+" м<br>Пешком: примерно "+walkMin+" мин").openPopup();
+                                        window._marks.push(m);
+                                    } else {
+                                        var m = L.marker(nearPt).addTo(MAP);
+                                        m.bindPopup("Ближайшая улица: <b>"+(bestStreet.name||"—")+"</b><br>Расстояние: "+meters+" м<br>Пешком: примерно "+walkMin+" мин").openPopup();
+                                        window._marks.push(m);
+                                    }
+                                }
+                            } catch(e) {
+                                var m = L.marker(nearPt).addTo(MAP);
+                                m.bindPopup("Ближайшая улица: <b>"+(bestStreet.name||"—")+"</b><br>Расстояние: "+meters+" м<br>Пешком: примерно "+walkMin+" мин").openPopup();
+                                window._marks.push(m);
+                            }
+                        } else {
+                            var iconToUse = null;
+                            if (bestMarker) {
+                                try { iconToUse = bestMarker.options && bestMarker.options.icon ? bestMarker.options.icon : null; } catch(e){ iconToUse = null; }
+                            }
+                            var newMarker;
+                            if (iconToUse) {
+                                newMarker = L.marker(nearPt, {icon: iconToUse}).addTo(MAP);
+                            } else {
+                                newMarker = L.marker(nearPt).addTo(MAP);
+                            }
+                            newMarker.bindPopup("Ближайшая улица: <b>"+(bestStreet.name||"—")+"</b><br>Расстояние: "+meters+" м<br>Пешком: примерно "+walkMin+" мин").openPopup();
+                            window._marks.push(newMarker);
+                            MAP.flyTo(nearPt, 17);
+                        }
+
+                        var um=L.circleMarker(user,{radius:6,color:'#333',fillColor:'#fff',weight:2}).addTo(MAP);
+                        um.bindPopup("Вы здесь");
+                        window._marks.push(um);
+
+                    },function(err){ alert("Ошибка геопозиции: "+err.message); },
+                    {enableHighAccuracy:true,timeout:10000,maximumAge:0});
+                }
+
+                var btn=document.createElement("button");
+                btn.textContent="Показать ближайшую улицу ко мне";
+                btn.style.position="absolute";
+                btn.style.top="10px";
+                btn.style.left="50%";
+                btn.style.transform="translateX(-50%)";
+                btn.style.zIndex=1000;
+                btn.style.padding="8px 12px";
+                btn.style.background="white";
+                btn.style.border="1px solid #888";
+                btn.style.borderRadius="6px";
+                btn.onclick=showNearestStreet;
+                document.body.appendChild(btn);
+
+                 // ==== Плавающий рекламный блок (креативный дизайн) ====
+                var adWrap = document.createElement("div");
+                adWrap.id = "__sperren_ad";
+                adWrap.style.position = "fixed";
+                adWrap.style.bottom = "22px";
+                adWrap.style.right = "22px";
+                adWrap.style.zIndex = 99999;
+                adWrap.style.width = "260px";
+                adWrap.style.maxWidth = "calc(100% - 44px)";
+                adWrap.style.boxSizing = "border-box";
+                adWrap.style.fontFamily = "Inter, Arial, Helvetica, sans-serif";
+                adWrap.style.transition = "transform 0.24s ease, opacity 0.2s ease";
+                adWrap.style.boxShadow = "0 10px 30px rgba(0,0,0,0.12)";
+                adWrap.style.borderRadius = "12px";
+                adWrap.style.overflow = "hidden";
+                adWrap.style.background = "linear-gradient(180deg,#ffffff,#fbfbff)";
+
+                // inner content
+                var adInner = document.createElement("div");
+                adInner.style.padding = "12px";
+                adInner.style.display = "flex";
+                adInner.style.gap = "10px";
+                adInner.style.alignItems = "center";
+
+                // left: logo / icon
+                var adIcon = document.createElement("div");
+                adIcon.style.width = "48px";
+                adIcon.style.height = "48px";
+                adIcon.style.borderRadius = "10px";
+                adIcon.style.flex = "0 0 48px";
+                adIcon.style.backgroundImage = "url('https://routefromhome-collab.github.io/sperren-map/logo.jpg')";
+                adIcon.style.backgroundSize = "cover";
+                adIcon.style.backgroundPosition = "center";
+                adIcon.style.display = "flex";
+                adIcon.style.alignItems = "center";
+                adIcon.style.justifyContent = "center";
+
+                adIcon.style.color = "#fff";
+                adIcon.style.fontWeight = "700";
+                adIcon.style.fontSize = "20px";
+
+                var adTextWrap = document.createElement("div");
+                adTextWrap.style.flex = "1 1 auto";
+                adTextWrap.innerHTML = "<div style='font-size:15px; font-weight:700; color:#111; line-height:1.05;'>⚡Карта от канала Schwebezeit</div>" +
+                                       "<div style='font-size:13px; color:#444; margin-top:4px;'>Лучший канал — подпишись в Telegram</div>";
+
+                var adCTA = document.createElement("div");
+                adCTA.style.flex = "0 0 auto";
+                var ctaBtn = document.createElement("button");
+                ctaBtn.textContent = "Перейти";
+                ctaBtn.style.background = "#1d72ff";
+                ctaBtn.style.color = "#fff";
+                ctaBtn.style.border = "none";
+                ctaBtn.style.padding = "8px 10px";
+                ctaBtn.style.borderRadius = "8px";
+                ctaBtn.style.cursor = "pointer";
+                ctaBtn.style.fontWeight = "700";
+                ctaBtn.onclick = function(e){ e.stopPropagation(); window.open('https://t.me/schwebezeit','_blank'); };
+                adCTA.appendChild(ctaBtn);
+
+                adInner.appendChild(adIcon);
+                adInner.appendChild(adTextWrap);
+                adInner.appendChild(adCTA);
+
+                var closeBtn = document.createElement("button");
+                closeBtn.innerHTML = "✕";
+                closeBtn.style.position = "absolute";
+                closeBtn.style.top = "6px";
+                closeBtn.style.right = "8px";
+                closeBtn.style.width = "28px";
+                closeBtn.style.height = "28px";
+                closeBtn.style.border = "none";
+                closeBtn.style.background = "transparent";
+                closeBtn.style.color = "#666";
+                closeBtn.style.cursor = "pointer";
+                closeBtn.style.fontSize = "14px";
+                closeBtn.onclick = function(e){ e.stopPropagation(); adWrap.style.transform = 'translateY(16px) scale(0.98)'; adWrap.style.opacity='0'; setTimeout(function(){ try{ adWrap.remove(); }catch(e){} },220); };
+
+                adWrap.appendChild(adInner);
+                adWrap.appendChild(closeBtn);
+
+                var adFooter = document.createElement("div");
+                adFooter.style.padding = "8px 12px";
+                adFooter.style.fontSize = "11px";
+                adFooter.style.color = "#666";
+                adFooter.style.background = "rgba(0,0,0,0.02)";
+                adFooter.style.textAlign = "center";
+                adFooter.innerHTML = "Поддержка проекта — <a href='https://t.me/schwebezeit' target='_blank' style='color:#1d72ff;text-decoration:none;'>Schwebezeit</a>";
+                adFooter.onclick = function(e){ e.stopPropagation(); window.open('https://t.me/schwebezeit','_blank'); };
+
+                adWrap.appendChild(adFooter);
+                adWrap.onclick = function(){ window.open('https://t.me/schwebezeit','_blank'); };
+                document.body.appendChild(adWrap);
+            } catch(e) {
+                console.error("MAP init error:",e);
+            }
+        });
+        </script>
+    </body>
+<script>
+    
+    
+            var map_e757db35bbae2305256daef316912cfd = L.map(
+                "map_e757db35bbae2305256daef316912cfd",
+                {
+                    center: [51.2562, 7.1508],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 12,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_e1c916f8615814ba0b7d8f54ec3c2693 = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_e1c916f8615814ba0b7d8f54ec3c2693.addTo(map_e757db35bbae2305256daef316912cfd);
+        
+    
+            var marker_cluster_76128818a545ff71dcda52a94e85ddc3 = L.markerClusterGroup(
+                {
+}
+            );
+        
+    
+            var marker_513eb05376ebc6d5379850a384e40433 = L.marker(
+                [51.2674726, 7.1076456],
+                {
+}
+            ).addTo(marker_cluster_76128818a545ff71dcda52a94e85ddc3);
+        
+    
+            var icon_cad004fc086c726077e3c1f537d47779 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_cbe6b6de88ccc0d208daf1aea8074a48 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_0edc330463050736a1f14e1edee3ad1c = $(`<div id="html_0edc330463050736a1f14e1edee3ad1c" style="width: 100.0%; height: 100.0%;">Untere Bergerheide</div>`)[0];
+                popup_cbe6b6de88ccc0d208daf1aea8074a48.setContent(html_0edc330463050736a1f14e1edee3ad1c);
+            
+        
+
+        marker_513eb05376ebc6d5379850a384e40433.bindPopup(popup_cbe6b6de88ccc0d208daf1aea8074a48)
+        ;
+
+        
+    
+    
+                marker_513eb05376ebc6d5379850a384e40433.setIcon(icon_cad004fc086c726077e3c1f537d47779);
+            
+    
+            var marker_c7bcea2fb4b26746542a1f95e6ecb346 = L.marker(
+                [51.2695596, 7.113229],
+                {
+}
+            ).addTo(marker_cluster_76128818a545ff71dcda52a94e85ddc3);
+        
+    
+            var icon_52313369db0724c9684f60e7463e5785 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_861815765e80d45d45456ea4adc73ec5 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_adc8d8bb5ff72e9d8460aea8b57042ba = $(`<div id="html_adc8d8bb5ff72e9d8460aea8b57042ba" style="width: 100.0%; height: 100.0%;">Hosfelds Katernberg</div>`)[0];
+                popup_861815765e80d45d45456ea4adc73ec5.setContent(html_adc8d8bb5ff72e9d8460aea8b57042ba);
+            
+        
+
+        marker_c7bcea2fb4b26746542a1f95e6ecb346.bindPopup(popup_861815765e80d45d45456ea4adc73ec5)
+        ;
+
+        
+    
+    
+                marker_c7bcea2fb4b26746542a1f95e6ecb346.setIcon(icon_52313369db0724c9684f60e7463e5785);
+            
+    
+            var marker_e30af1f6855a8581e8db27fa668e7d67 = L.marker(
+                [51.268442, 7.108854],
+                {
+}
+            ).addTo(marker_cluster_76128818a545ff71dcda52a94e85ddc3);
+        
+    
+            var icon_1a62a281e703c1880bcb5902435a9aa5 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_efe5258fb78b1a2b9e467e68fa2990b5 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_669ee14ad5c43db6b3ed7537873bb457 = $(`<div id="html_669ee14ad5c43db6b3ed7537873bb457" style="width: 100.0%; height: 100.0%;">Mittlere Bergerheide</div>`)[0];
+                popup_efe5258fb78b1a2b9e467e68fa2990b5.setContent(html_669ee14ad5c43db6b3ed7537873bb457);
+            
+        
+
+        marker_e30af1f6855a8581e8db27fa668e7d67.bindPopup(popup_efe5258fb78b1a2b9e467e68fa2990b5)
+        ;
+
+        
+    
+    
+                marker_e30af1f6855a8581e8db27fa668e7d67.setIcon(icon_1a62a281e703c1880bcb5902435a9aa5);
+            
+    
+            var marker_4ce8732acd511e7859e85cb181513864 = L.marker(
+                [51.2700872, 7.1106105],
+                {
+}
+            ).addTo(marker_cluster_76128818a545ff71dcda52a94e85ddc3);
+        
+    
+            var icon_724102961a015f1debb71d58e39b6508 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_c4fea848e23ca29bc3ec66a6af9b746c = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_6e0943a6ddd6d79d3694c9c1b9b54e27 = $(`<div id="html_6e0943a6ddd6d79d3694c9c1b9b54e27" style="width: 100.0%; height: 100.0%;">Richard-Seel-Weg</div>`)[0];
+                popup_c4fea848e23ca29bc3ec66a6af9b746c.setContent(html_6e0943a6ddd6d79d3694c9c1b9b54e27);
+            
+        
+
+        marker_4ce8732acd511e7859e85cb181513864.bindPopup(popup_c4fea848e23ca29bc3ec66a6af9b746c)
+        ;
+
+        
+    
+    
+                marker_4ce8732acd511e7859e85cb181513864.setIcon(icon_724102961a015f1debb71d58e39b6508);
+            
+    
+            var marker_5cb2c858090b2d842fe72b62e95bed22 = L.marker(
+                [51.2744857, 7.1149653],
+                {
+}
+            ).addTo(marker_cluster_76128818a545ff71dcda52a94e85ddc3);
+        
+    
+            var icon_d061e72cff98166bd3661abbfe308ddb = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_98b3f2e50ef5ecaddc4717fa535ad20a = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_d8fbb9083c15ecf75c115aa7319c12a2 = $(`<div id="html_d8fbb9083c15ecf75c115aa7319c12a2" style="width: 100.0%; height: 100.0%;">In den Birken</div>`)[0];
+                popup_98b3f2e50ef5ecaddc4717fa535ad20a.setContent(html_d8fbb9083c15ecf75c115aa7319c12a2);
+            
+        
+
+        marker_5cb2c858090b2d842fe72b62e95bed22.bindPopup(popup_98b3f2e50ef5ecaddc4717fa535ad20a)
+        ;
+
+        
+    
+    
+                marker_5cb2c858090b2d842fe72b62e95bed22.setIcon(icon_d061e72cff98166bd3661abbfe308ddb);
+            
+    
+            var marker_2ef9bd25a867451c8efb4465dcd83d29 = L.marker(
+                [51.2650439, 7.1116711],
+                {
+}
+            ).addTo(marker_cluster_76128818a545ff71dcda52a94e85ddc3);
+        
+    
+            var icon_f2e00690d2734abe127fb20e7173a6be = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_a8731da19698a51e8466860250bb4581 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_54bc99a4ad410acc3eee93e81f4600f4 = $(`<div id="html_54bc99a4ad410acc3eee93e81f4600f4" style="width: 100.0%; height: 100.0%;">Falkenberg</div>`)[0];
+                popup_a8731da19698a51e8466860250bb4581.setContent(html_54bc99a4ad410acc3eee93e81f4600f4);
+            
+        
+
+        marker_2ef9bd25a867451c8efb4465dcd83d29.bindPopup(popup_a8731da19698a51e8466860250bb4581)
+        ;
+
+        
+    
+    
+                marker_2ef9bd25a867451c8efb4465dcd83d29.setIcon(icon_f2e00690d2734abe127fb20e7173a6be);
+            
+    
+            var marker_87a8caabd96551ddd292a4b7d5cb4ff9 = L.marker(
+                [51.2686116, 7.1069892],
+                {
+}
+            ).addTo(marker_cluster_76128818a545ff71dcda52a94e85ddc3);
+        
+    
+            var icon_dcbfdfd15df91a6b4c8c9d152d8d9f17 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_49537eec4c3d831ce751a21921d62a55 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_5053003d0b3aba673330f7b5204e8cc4 = $(`<div id="html_5053003d0b3aba673330f7b5204e8cc4" style="width: 100.0%; height: 100.0%;">Obere Bergerheide</div>`)[0];
+                popup_49537eec4c3d831ce751a21921d62a55.setContent(html_5053003d0b3aba673330f7b5204e8cc4);
+            
+        
+
+        marker_87a8caabd96551ddd292a4b7d5cb4ff9.bindPopup(popup_49537eec4c3d831ce751a21921d62a55)
+        ;
+
+        
+    
+    
+                marker_87a8caabd96551ddd292a4b7d5cb4ff9.setIcon(icon_dcbfdfd15df91a6b4c8c9d152d8d9f17);
+            
+    
+            var marker_8015c24a577def5df7321528f9b14013 = L.marker(
+                [51.2731096, 7.1174283],
+                {
+}
+            ).addTo(marker_cluster_76128818a545ff71dcda52a94e85ddc3);
+        
+    
+            var icon_86d117f35562c6cf3765b766591c5cf6 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_0c723b7796c1b4e8e16a3899050bc088 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_20c7a4f72b57447917702b07c2d33214 = $(`<div id="html_20c7a4f72b57447917702b07c2d33214" style="width: 100.0%; height: 100.0%;">Am Acker</div>`)[0];
+                popup_0c723b7796c1b4e8e16a3899050bc088.setContent(html_20c7a4f72b57447917702b07c2d33214);
+            
+        
+
+        marker_8015c24a577def5df7321528f9b14013.bindPopup(popup_0c723b7796c1b4e8e16a3899050bc088)
+        ;
+
+        
+    
+    
+                marker_8015c24a577def5df7321528f9b14013.setIcon(icon_86d117f35562c6cf3765b766591c5cf6);
+            
+    
+            var marker_dcc553ef5a2428fc7013ec5eb845bce9 = L.marker(
+                [51.2719337, 7.113528],
+                {
+}
+            ).addTo(marker_cluster_76128818a545ff71dcda52a94e85ddc3);
+        
+    
+            var icon_11614893f60108b47219639157d6d733 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_043418c3241b76d2198d7e7a41bbb7cb = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_c8068796a5e19c6f571864e0c551ec16 = $(`<div id="html_c8068796a5e19c6f571864e0c551ec16" style="width: 100.0%; height: 100.0%;">Herberts Katernberg</div>`)[0];
+                popup_043418c3241b76d2198d7e7a41bbb7cb.setContent(html_c8068796a5e19c6f571864e0c551ec16);
+            
+        
+
+        marker_dcc553ef5a2428fc7013ec5eb845bce9.bindPopup(popup_043418c3241b76d2198d7e7a41bbb7cb)
+        ;
+
+        
+    
+    
+                marker_dcc553ef5a2428fc7013ec5eb845bce9.setIcon(icon_11614893f60108b47219639157d6d733);
+            
+    
+            var marker_9f6515aa46c9e72f5f5a57d8ee85cfbb = L.marker(
+                [51.2667247, 7.1071181],
+                {
+}
+            ).addTo(marker_cluster_76128818a545ff71dcda52a94e85ddc3);
+        
+    
+            var icon_949755ae1f4bd5a83d8d03db0e03b2a6 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_9fbdca95862389fe5eb7d4e5615dcf73 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_399e0a5e945432ad8aeb576ce8dd9a2e = $(`<div id="html_399e0a5e945432ad8aeb576ce8dd9a2e" style="width: 100.0%; height: 100.0%;">Beeker Winkel</div>`)[0];
+                popup_9fbdca95862389fe5eb7d4e5615dcf73.setContent(html_399e0a5e945432ad8aeb576ce8dd9a2e);
+            
+        
+
+        marker_9f6515aa46c9e72f5f5a57d8ee85cfbb.bindPopup(popup_9fbdca95862389fe5eb7d4e5615dcf73)
+        ;
+
+        
+    
+    
+                marker_9f6515aa46c9e72f5f5a57d8ee85cfbb.setIcon(icon_949755ae1f4bd5a83d8d03db0e03b2a6);
+            
+    
+            var marker_985a6fd51e4beacb84213271db8918ad = L.marker(
+                [51.2714549, 7.1220588],
+                {
+}
+            ).addTo(marker_cluster_76128818a545ff71dcda52a94e85ddc3);
+        
+    
+            var icon_2a23c6c04f318db215e26fa0666784ce = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_40674a231ce9daac3163483a3a6744a8 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_89a53887c82ef1165a0aeb3c2ed41985 = $(`<div id="html_89a53887c82ef1165a0aeb3c2ed41985" style="width: 100.0%; height: 100.0%;">Katernberger Schulweg</div>`)[0];
+                popup_40674a231ce9daac3163483a3a6744a8.setContent(html_89a53887c82ef1165a0aeb3c2ed41985);
+            
+        
+
+        marker_985a6fd51e4beacb84213271db8918ad.bindPopup(popup_40674a231ce9daac3163483a3a6744a8)
+        ;
+
+        
+    
+    
+                marker_985a6fd51e4beacb84213271db8918ad.setIcon(icon_2a23c6c04f318db215e26fa0666784ce);
+            
+    
+            var marker_ef0cf4e1e6597d29160569c28061b9b5 = L.marker(
+                [51.268132, 7.1186994],
+                {
+}
+            ).addTo(marker_cluster_76128818a545ff71dcda52a94e85ddc3);
+        
+    
+            var icon_9309185b5169094a791b6587ea4132fa = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_8ae65430ba64d6445f9c96040531dac4 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_9e8718886715c6230df1628ad19d2e32 = $(`<div id="html_9e8718886715c6230df1628ad19d2e32" style="width: 100.0%; height: 100.0%;">August-Jung-Weg</div>`)[0];
+                popup_8ae65430ba64d6445f9c96040531dac4.setContent(html_9e8718886715c6230df1628ad19d2e32);
+            
+        
+
+        marker_ef0cf4e1e6597d29160569c28061b9b5.bindPopup(popup_8ae65430ba64d6445f9c96040531dac4)
+        ;
+
+        
+    
+    
+                marker_ef0cf4e1e6597d29160569c28061b9b5.setIcon(icon_9309185b5169094a791b6587ea4132fa);
+            
+    
+            var marker_bc6de31a220c031fde817d12fec033f8 = L.marker(
+                [51.2707415, 7.1207374],
+                {
+}
+            ).addTo(marker_cluster_76128818a545ff71dcda52a94e85ddc3);
+        
+    
+            var icon_b6cbc22447c771b09269ac6c7642df7e = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "info-sign",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_74ed8851aa39c8ba19eb155f3283c6b1 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_2a922bf4daa8f50b6b6280e15f541a4c = $(`<div id="html_2a922bf4daa8f50b6b6280e15f541a4c" style="width: 100.0%; height: 100.0%;">Schuckertstr</div>`)[0];
+                popup_74ed8851aa39c8ba19eb155f3283c6b1.setContent(html_2a922bf4daa8f50b6b6280e15f541a4c);
+            
+        
+
+        marker_bc6de31a220c031fde817d12fec033f8.bindPopup(popup_74ed8851aa39c8ba19eb155f3283c6b1)
+        ;
+
+        
+    
+    
+                marker_bc6de31a220c031fde817d12fec033f8.setIcon(icon_b6cbc22447c771b09269ac6c7642df7e);
+            
+    
+            marker_cluster_76128818a545ff71dcda52a94e85ddc3.addTo(map_e757db35bbae2305256daef316912cfd);
+        
+    
+            map_e757db35bbae2305256daef316912cfd.fitBounds(
+                [[51.2674726, 7.1076456], [51.2695596, 7.113229], [51.268442, 7.108854], [51.2700872, 7.1106105], [51.2744857, 7.1149653], [51.2650439, 7.1116711], [51.2686116, 7.1069892], [51.2731096, 7.1174283], [51.2719337, 7.113528], [51.2667247, 7.1071181], [51.2714549, 7.1220588], [51.268132, 7.1186994], [51.2707415, 7.1207374]],
+                {}
+            );
+        
+    
+            var locate_control_e9b98e52afec91df254589918ead53d1 = L.control.locate(
+                {}
+            ).addTo(map_e757db35bbae2305256daef316912cfd);
+            
+        
+</script>
+</html>
