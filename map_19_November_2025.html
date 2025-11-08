@@ -17,7 +17,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_cb990c46678192795f9b23dbb7221af3 {
+                #map_05e6d10444cee402567c138543ff2246 {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -56,147 +56,167 @@
 <body>
     
     
-            <div class="folium-map" id="map_cb990c46678192795f9b23dbb7221af3" ></div>
+            <div class="folium-map" id="map_05e6d10444cee402567c138543ff2246" ></div>
         
 
-    <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        try {
-            var MAP = null;
-            MAP = map_cb990c46678192795f9b23dbb7221af3;
-            if (!MAP) {
-                MAP = Object.values(window).find(v => v && v._leaflet_id && v instanceof L.Map);
-            }
-            if (!MAP) {
-                console.error("Map not found");
-                return;
-            }
-
-            var STREETS = [{"name": "flensburger straße", "coords": [[51.2652057, 7.1492367]]}, {"name": "weststraße", "coords": [[51.250673, 7.1471719]]}, {"name": "schleswiger straße", "coords": [[51.2663934, 7.1486734]]}, {"name": "marienstraße", "coords": [[51.2593657, 7.1370577]]}, {"name": "kieler straße", "coords": [[51.2665508, 7.1511802]]}, {"name": "kleeblatt", "coords": [[51.2530666, 7.1451499]]}, {"name": "wiesenstraße", "coords": [[51.2652681, 7.1374758]]}, {"name": "auf dem johannisberg", "coords": [[51.2527569, 7.1422081]]}, {"name": "südstraße", "coords": [[51.2532765, 7.1397035]]}, {"name": "holsteiner straße", "coords": [[51.2650662, 7.14844]]}];
-
-            function haversine_m(a,b) {
-                var R = 6371000;
-                var φ1 = a[0]*Math.PI/180, φ2 = b[0]*Math.PI/180;
-                var dφ = (b[0]-a[0])*Math.PI/180;
-                var dλ = (b[1]-a[1])*Math.PI/180;
-                var sa = Math.sin(dφ/2)*Math.sin(dφ/2) + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)*Math.sin(dλ/2);
-                var c = 2*Math.atan2(Math.sqrt(sa), Math.sqrt(1-sa));
-                return R*c;
-            }
-
-            function closestPointOnSegment(p, a, b) {
-                var latScale = Math.cos(p[0]*Math.PI/180);
-                var ax=a[0], ay=a[1]*latScale;
-                var bx=b[0], by=b[1]*latScale;
-                var px=p[0], py=p[1]*latScale;
-                var vx=bx-ax, vy=by-ay;
-                var wx=px-ax, wy=py-ay;
-                var vlen2 = vx*vx + vy*vy;
-                if (vlen2===0) return a.slice();
-                var t = (vx*wx + vy*wy) / vlen2;
-                t = Math.max(0, Math.min(1,t));
-                var cx=ax+vx*t, cy=ay+vy*t;
-                return [cx, cy/latScale];
-            }
-
-            function nearestPointOnPolyline(p, coords) {
-                if (!coords || coords.length===0) return null;
-                var best=null, bestDist=Infinity;
-                if (coords.length===1) {
-                    return {point:coords[0], dist:haversine_m(p,coords[0])};
+        <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            try {
+                var MAP = null;
+                MAP = map_05e6d10444cee402567c138543ff2246;
+                if (!MAP) {
+                    MAP = Object.values(window).find(v => v && v._leaflet_id && v instanceof L.Map);
                 }
-                for (var i=0;i<coords.length-1;i++) {
-                    var a=coords[i], b=coords[i+1];
-                    var c=closestPointOnSegment(p,a,b);
-                    var d=haversine_m(p,c);
-                    if (d<bestDist) {
-                        bestDist=d;
-                        best={point:c,dist:d};
-                    }
-                }
-                return best;
-            }
-
-            function showNearestStreet() {
-                if (!navigator.geolocation) {
-                    alert("Геолокация не поддерживается");
+                if (!MAP) {
+                    console.error("Map not found");
                     return;
                 }
-                navigator.geolocation.getCurrentPosition(function(pos) {
-                    var user=[pos.coords.latitude,pos.coords.longitude];
-                    var bestStreet=null, bestInfo=null;
 
-                    for (var si=0;si<STREETS.length;si++) {
-                        var st=STREETS[si];
-                        var coords=st.coords||[];
-                        if (!coords.length) continue;
-                        var flat=(Array.isArray(coords[0]) && Array.isArray(coords[0][0]))? coords.flat():coords;
-                        var info=nearestPointOnPolyline(user,flat);
-                        if (!info) continue;
-                        if (!bestInfo || info.dist<bestInfo.dist) {
-                            bestInfo=info;
-                            bestStreet={name:st.name, coords:flat};
+                var STREETS = [{"name": "auf dem johannisberg", "coords": [[51.2532028, 7.1418589], [51.2531975, 7.141906], [51.2532019, 7.1419535], [51.2532159, 7.1419966], [51.253238, 7.1420301], [51.2532657, 7.1420502], [51.253296, 7.1420547], [51.2533255, 7.1420432], [51.2533511, 7.1420168], [51.2533699, 7.1419786], [51.2533798, 7.1419327], [51.2533798, 7.1418841], [51.2533699, 7.1418381], [51.2533514, 7.1418004], [51.2533263, 7.1417741], [51.2532972, 7.1417622], [51.2532673, 7.141766], [51.2532397, 7.1417849], [51.2532174, 7.141817], [51.2532028, 7.1418589], [51.2532019, 7.1419535], [51.253144, 7.1419834], [51.253074, 7.1420196], [51.2529421, 7.1420706], [51.2528761, 7.1421009], [51.2527988, 7.1421631], [51.252713, 7.1422552], [51.2524305, 7.1426109], [51.2524305, 7.1426109], [51.2523435, 7.1427256]]}, {"name": "flensburger straße", "coords": [[51.2641708, 7.1491888], [51.2650061, 7.1492272], [51.2652802, 7.1492402], [51.2652898, 7.149244], [51.2657445, 7.149639], [51.2658002, 7.1496873], [51.2660008, 7.1498756], [51.2624044, 7.1489406], [51.2625272, 7.1489811], [51.2625436, 7.1489865], [51.2627084, 7.149041], [51.2629147, 7.1491155], [51.2641708, 7.1491888]]}, {"name": "holsteiner straße", "coords": [[51.266184, 7.1490431], [51.2661705, 7.1490233], [51.265878, 7.1486221], [51.2658357, 7.1485967], [51.2650468, 7.1484361], [51.2647732, 7.1483822], [51.2647375, 7.1483903], [51.2641913, 7.1489637], [51.2641752, 7.1490087], [51.2641708, 7.1491888]]}, {"name": "kieler straße", "coords": [[51.2672471, 7.1516946], [51.2680062, 7.1522437], [51.2680482, 7.1522366], [51.2658366, 7.1506924], [51.2659283, 7.1507402], [51.2662813, 7.1509888], [51.2666497, 7.1512504], [51.2672471, 7.1516946]]}, {"name": "kleeblatt", "coords": [[51.2492954, 7.1496485], [51.2494037, 7.149565], [51.249439, 7.1495374], [51.2495656, 7.1494484], [51.2530089, 7.1452123], [51.2530945, 7.1451198], [51.2531255, 7.1450887], [51.2531971, 7.1450172], [51.2533028, 7.1449083], [51.2528443, 7.1454169], [51.2529195, 7.1453175], [51.2505043, 7.1486627], [51.25073, 7.148487], [51.2507721, 7.148463], [51.2509095, 7.148386], [51.2525567, 7.1458568], [51.2527005, 7.1456369], [51.250284, 7.1488481], [51.2503871, 7.1487692], [51.2505043, 7.1486627], [51.2495656, 7.1494484], [51.2498459, 7.1492247], [51.2498459, 7.1492247], [51.2500315, 7.1490723], [51.2500716, 7.1490395], [51.2501781, 7.1489378], [51.2523637, 7.1462386], [51.2522568, 7.1463657], [51.2517349, 7.1476042], [51.2517241, 7.1476289], [51.2516248, 7.1478146], [51.251543, 7.1479354], [51.2514866, 7.1480778], [51.2523637, 7.1462386], [51.2524049, 7.14615], [51.2524493, 7.1460596], [51.2524875, 7.145984], [51.2518863, 7.147451], [51.2521465, 7.1468564], [51.2523307, 7.1464414], [51.2523637, 7.1462386], [51.2509095, 7.148386], [51.2510565, 7.1483255], [51.2513214, 7.1481941], [51.2514866, 7.1480778], [51.2524875, 7.145984], [51.2525084, 7.1459422], [51.2525084, 7.1459422], [51.2525567, 7.1458568], [51.2529195, 7.1453175], [51.2530089, 7.1452123], [51.2501781, 7.1489378], [51.250284, 7.1488481], [51.2531255, 7.1450887], [51.2531971, 7.1450172], [51.2527005, 7.1456369], [51.2528443, 7.1454169], [51.2514866, 7.1480778], [51.2515917, 7.148015], [51.2516665, 7.1479193], [51.2517411, 7.1477856], [51.2518863, 7.147451]]}, {"name": "marienstraße", "coords": [[51.2564139, 7.1324838], [51.2564468, 7.1325434], [51.2564722, 7.132567], [51.256497, 7.1325693], [51.2565255, 7.1325649], [51.256983, 7.1323581], [51.2570191, 7.1323549], [51.2570453, 7.1323926], [51.2574868, 7.133526], [51.2578518, 7.133804], [51.2580294, 7.1342531], [51.2580294, 7.1342531], [51.2583841, 7.1352048], [51.2615508, 7.1394971], [51.2605574, 7.1387831], [51.2605574, 7.1387831], [51.2604026, 7.1386642], [51.2603252, 7.1385443], [51.2598786, 7.137825], [51.2594666, 7.1372045], [51.2594376, 7.1371647], [51.2590868, 7.1366423], [51.259015, 7.1365376], [51.2589563, 7.1364579], [51.2587261, 7.1360651], [51.2586788, 7.135963], [51.258418, 7.135288], [51.2583841, 7.1352048]]}, {"name": "schleswiger straße", "coords": [[51.266184, 7.1490431], [51.2666027, 7.1483036], [51.2666027, 7.1483036], [51.2667177, 7.1480717], [51.2667301, 7.1480265], [51.2667352, 7.1479911], [51.2667404, 7.1478577], [51.2680482, 7.1522366], [51.2680814, 7.1522073], [51.2682396, 7.1516489], [51.2682382, 7.1515963], [51.2682205, 7.1515526], [51.2674366, 7.1510154], [51.266184, 7.1490431], [51.2663343, 7.1476071], [51.2663749, 7.1476218], [51.2664926, 7.1476643], [51.2664632, 7.1478652], [51.266385, 7.1478332], [51.2663537, 7.1478204]]}, {"name": "südstraße", "coords": [[51.2491923, 7.1436644], [51.2493688, 7.1433944], [51.2494875, 7.14316], [51.2516222, 7.1412475], [51.2515468, 7.1413328], [51.2514912, 7.141378], [51.2551921, 7.1465238], [51.255147, 7.1465195], [51.2549325, 7.1465024], [51.2547894, 7.1464872], [51.2546269, 7.14647], [51.254602, 7.146446], [51.2545813, 7.1464229], [51.2545615, 7.1464003], [51.2545341, 7.1463432], [51.2544944, 7.1462181], [51.2544821, 7.1460377], [51.2544637, 7.1455339], [51.2535514, 7.1394725], [51.2531143, 7.1398398], [51.253085, 7.139984], [51.2542177, 7.1420926], [51.2541854, 7.141928], [51.2541368, 7.1417322], [51.2540806, 7.1415458], [51.2537167, 7.1404742], [51.2536821, 7.1403773], [51.2536458, 7.1402857], [51.2536044, 7.1402025], [51.2535594, 7.1401245], [51.2535028, 7.1400503], [51.2534448, 7.1399948], [51.2533822, 7.1399507], [51.2533124, 7.1399305], [51.2532483, 7.1399264], [51.2531687, 7.1399444], [51.253085, 7.139984], [51.2530112, 7.1400297], [51.2528485, 7.140168], [51.2513225, 7.1414944], [51.251138, 7.1416213], [51.2510132, 7.1416975], [51.2509874, 7.1417176], [51.250851, 7.1418106], [51.2494875, 7.14316], [51.2493381, 7.1433272], [51.2489032, 7.1450531], [51.2489048, 7.1446726], [51.2489226, 7.1444339], [51.248958, 7.1442445], [51.249049, 7.1439156], [51.2493381, 7.1433272], [51.2491479, 7.1435833], [51.2490911, 7.1436922], [51.2494875, 7.14316], [51.2495656, 7.1430387], [51.249049, 7.1439156], [51.2491923, 7.1436644], [51.2489032, 7.1450531], [51.2490038, 7.1464334], [51.2490511, 7.1472516], [51.2490836, 7.1484139], [51.2491214, 7.1488743], [51.2491484, 7.1490521], [51.249049, 7.1439156], [51.249097, 7.1437655], [51.2490911, 7.1436922], [51.2544356, 7.144635], [51.254415, 7.1441528], [51.2544069, 7.1440472], [51.2543602, 7.1435324], [51.2542897, 7.1428047], [51.2542283, 7.1421975], [51.2542177, 7.1420926], [51.2500593, 7.1424424], [51.2503132, 7.1422165], [51.2505184, 7.1420465], [51.2524418, 7.1405064], [51.2524054, 7.1405426], [51.2521256, 7.1407986], [51.2491484, 7.1490521], [51.2491743, 7.1491666], [51.2492194, 7.1494152], [51.2492289, 7.1494507], [51.2490911, 7.1436922], [51.2489949, 7.1438795], [51.2489481, 7.1440282], [51.2489008, 7.1442177], [51.2488662, 7.1444048], [51.2488557, 7.1445452], [51.248861, 7.1446653], [51.2489032, 7.1450531], [51.2544637, 7.1455339], [51.25446, 7.1453892], [51.2544392, 7.1447666], [51.2519399, 7.1409693], [51.2518941, 7.141008], [51.2517819, 7.1411079], [51.2517472, 7.1411382], [51.2516222, 7.1412475], [51.251138, 7.1416213], [51.2510132, 7.1416975], [51.2495656, 7.1430387], [51.2497063, 7.1428255], [51.2499764, 7.1425149], [51.2500593, 7.1424424], [51.2518276, 7.141673], [51.2518138, 7.1413828], [51.2518256, 7.1412957], [51.25185, 7.1411731], [51.2518941, 7.141008], [51.2540806, 7.1415458], [51.2539878, 7.1412715], [51.2537952, 7.1407045], [51.2537167, 7.1404742], [51.2544392, 7.1447666], [51.2544356, 7.144635], [51.2528485, 7.140168], [51.2524418, 7.1405064], [51.250851, 7.1418106], [51.2506502, 7.1419474], [51.2505184, 7.1420465], [51.250851, 7.1418106], [51.2507263, 7.1417805], [51.2506399, 7.1417539], [51.2506084, 7.1417365], [51.2505288, 7.141675], [51.2503905, 7.1415693], [51.2521256, 7.1407986], [51.2520428, 7.1408737], [51.2519955, 7.1409163], [51.2519399, 7.1409693], [51.2492289, 7.1494507], [51.2492954, 7.1496485]]}, {"name": "weststraße", "coords": [[51.2505408, 7.1464176], [51.2505459, 7.1464589], [51.2507088, 7.1473728], [51.2507491, 7.1474599], [51.2507936, 7.1477093], [51.2507996, 7.1479217], [51.2509095, 7.148386], [51.2509575, 7.1485651], [51.2509706, 7.1486137], [51.2510941, 7.1493015], [51.2511865, 7.149803], [51.2512712, 7.1502456], [51.2513347, 7.1505667], [51.2514016, 7.150907], [51.2514293, 7.1510391], [51.2505408, 7.1464176], [51.2504801, 7.1456012], [51.2504418, 7.1450864], [51.250389, 7.1443751], [51.250324, 7.143503], [51.2503012, 7.1431889], [51.2500593, 7.1424424], [51.2497026, 7.141388], [51.2494631, 7.1408945], [51.2503012, 7.1431889], [51.2502741, 7.1431096], [51.2501999, 7.1428793], [51.2500593, 7.1424424], [51.2513257, 7.152658], [51.2512838, 7.1526826], [51.2512646, 7.1527061], [51.2512495, 7.1527366], [51.2512381, 7.1527837], [51.2515812, 7.151852], [51.251522, 7.151529], [51.2511367, 7.1529869], [51.2511231, 7.1530497], [51.2510977, 7.1531669], [51.2512706, 7.1529665], [51.2512463, 7.1528732], [51.2512413, 7.1528424], [51.2512381, 7.1527837], [51.2515812, 7.151852], [51.2516876, 7.1524059], [51.2516813, 7.1524884], [51.2516537, 7.1525702], [51.2516281, 7.1526134], [51.2515813, 7.1526424], [51.2513462, 7.1526566], [51.2513257, 7.152658], [51.251522, 7.151529], [51.2514293, 7.1510391], [51.2512381, 7.1527837], [51.2511367, 7.1529869], [51.2507996, 7.1479217], [51.2508506, 7.1481985], [51.2508685, 7.1482677], [51.2509095, 7.148386]]}, {"name": "wiesenstraße", "coords": [[51.2650022, 7.1406236], [51.2649876, 7.1407627], [51.2649309, 7.1413106], [51.2649251, 7.1413726], [51.2648621, 7.1420197], [51.2650022, 7.1406236], [51.265058, 7.1400909], [51.2650665, 7.1400099], [51.265109, 7.1396045], [51.2651992, 7.1386644], [51.2652311, 7.1383066], [51.2652621, 7.1376412], [51.2652678, 7.1374974], [51.2652826, 7.1365554], [51.26529, 7.1362492], [51.2652928, 7.134316], [51.2648621, 7.1420197], [51.2647526, 7.1431251], [51.2647455, 7.1432393], [51.2647397, 7.1433424], [51.2647367, 7.1436074], [51.2647698, 7.1440384], [51.2648326, 7.1447973], [51.2648711, 7.1453511], [51.2648756, 7.1454053], [51.2648807, 7.1454717], [51.2648807, 7.1454717], [51.264953, 7.1464414], [51.2649849, 7.1468858], [51.2649665, 7.1469627], [51.2649517, 7.1470101], [51.2649313, 7.1470471], [51.2648987, 7.1471051], [51.2648183, 7.1472069], [51.2652928, 7.134316], [51.2653139, 7.134114], [51.2653496, 7.1339272], [51.2654056, 7.1337014], [51.2654174, 7.133666], [51.2654843, 7.1334658], [51.2649849, 7.1468858], [51.2650095, 7.1470226], [51.2650144, 7.1470789], [51.2650271, 7.1471664], [51.2650464, 7.1472375], [51.264953, 7.1464414], [51.2649849, 7.1468858]]}];
+                
+                function haversine_m(a,b) {
+                    var R = 6371000;
+                    var φ1 = a[0]*Math.PI/180, φ2 = b[0]*Math.PI/180;
+                    var dφ = (b[0]-a[0])*Math.PI/180;
+                    var dλ = (b[1]-a[1])*Math.PI/180;
+                    var sa = Math.sin(dφ/2)*Math.sin(dφ/2) + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)*Math.sin(dλ/2);
+                    var c = 2*Math.atan2(Math.sqrt(sa), Math.sqrt(1-sa));
+                    return R*c;
+                }
+
+                function closestPointOnSegment(p, a, b) {
+                    var latScale = Math.cos(p[0]*Math.PI/180);
+                    var ax=a[0], ay=a[1]*latScale;
+                    var bx=b[0], by=b[1]*latScale;
+                    var px=p[0], py=p[1]*latScale;
+                    var vx=bx-ax, vy=by-ay;
+                    var wx=px-ax, wy=py-ay;
+                    var vlen2 = vx*vx + vy*vy;
+                    if (vlen2===0) return a.slice();
+                    var t = (vx*wx + vy*wy) / vlen2;
+                    t = Math.max(0, Math.min(1,t));
+                    var cx=ax+vx*t, cy=ay+vy*t;
+                    return [cx, cy/latScale];
+                }
+
+                function nearestPointOnPolyline(p, coords) {
+                    if (!coords || coords.length===0) return null;
+                    var best=null, bestDist=Infinity;
+                    if (coords.length===1) {
+                        return {point:coords[0], dist:haversine_m(p,coords[0])};
+                    }
+                    for (var i=0;i<coords.length-1;i++) {
+                        var a=coords[i], b=coords[i+1];
+                        var c=closestPointOnSegment(p,a,b);
+                        var d=haversine_m(p,c);
+                        if (d<bestDist) {
+                            bestDist=d;
+                            best={point:c,dist:d};
                         }
                     }
+                    return best;
+                }
+                
 
-                    if (!bestStreet || !bestInfo) {
-                        alert("Не удалось найти ближайшую улицу");
+                function showNearestStreet() {
+                    if (!navigator.geolocation) {
+                        alert("Геолокация не поддерживается");
                         return;
                     }
+                    navigator.geolocation.getCurrentPosition(function(pos) {
+                        var user=[pos.coords.latitude,pos.coords.longitude];
+                        var bestStreet=null, bestInfo=null;
 
-                    var nearPt=bestInfo.point;
-                    var meters=Math.round(bestInfo.dist);
-                    var walkMin=Math.max(1, Math.round((meters/1000)/5*60));
+                        for (var si=0;si<STREETS.length;si++) {
+                            var st=STREETS[si];
+                            var coords=st.coords||[];
+                            if (!coords.length) continue;                          
+                            var flat=(Array.isArray(coords[0]) && Array.isArray(coords[0][0]))? coords.flat():coords;
+                            var info=nearestPointOnPolyline(user,flat);
+                            if (!info) continue;
+                            if (!bestInfo || info.dist<bestInfo.dist) {
+                                bestInfo=info;
+                                bestStreet={name:st.name, coords:flat};
+                            }
+                        }
 
-                    MAP.flyTo(nearPt,17);
+                        if (!bestStreet || !bestInfo) {
+                            alert("Не удалось найти ближайшую улицу");
+                            return;
+                        }
 
-                    if (!window._marks) window._marks=[];
-                    window._marks.forEach(function(l){ try { MAP.removeLayer(l); } catch(e){} });
-                    window._marks=[];
+                        var nearPt=bestInfo.point;
+                        var meters=Math.round(bestInfo.dist);
+                        var walkMin=Math.max(1, Math.round((meters/1000)/5*60));
 
-                    setTimeout(function(){
-                        var m=L.marker(nearPt).addTo(MAP);
-                        m.bindPopup(
-                            "Ближайшая улица: <b>"+(bestStreet.name||"—")+"</b><br>"+
-                            "Расстояние: "+meters+" м<br>"+
-                            "Пешком: примерно "+walkMin+" мин"
-                        ).openPopup();
-                        window._marks.push(m);
-                    },650);
+                        MAP.flyTo(nearPt,17);
 
-                    var um=L.circleMarker(user,{radius:6,color:'#333',fillColor:'#fff',weight:2}).addTo(MAP);
-                    um.bindPopup("Вы здесь");
-                    window._marks.push(um);
+                        if (!window._marks) window._marks=[];
+                        window._marks.forEach(function(l){ try { MAP.removeLayer(l); } catch(e){} });
+                        window._marks=[];
 
-                },function(err){ alert("Ошибка геопозиции: "+err.message); },
-                {enableHighAccuracy:true,timeout:10000,maximumAge:0});
+                        setTimeout(function(){
+                            var m=L.marker(nearPt).addTo(MAP);
+                            m.bindPopup(
+                                "Ближайшая улица: <b>"+(bestStreet.name||"—")+"</b><br>"+
+                                "Расстояние: "+meters+" м<br>"+
+                                "Пешком: примерно "+walkMin+" мин"
+                            ).openPopup();
+                            window._marks.push(m);
+                        },650);
+
+                        var um=L.circleMarker(user,{radius:6,color:'#333',fillColor:'#fff',weight:2}).addTo(MAP);
+                        um.bindPopup("Вы здесь");
+                        window._marks.push(um);
+
+                    },function(err){ alert("Ошибка геопозиции: "+err.message); },
+                    {enableHighAccuracy:true,timeout:10000,maximumAge:0});
+                }
+
+                // Кнопка "Показать ближайшую улицу"
+                var btn=document.createElement("button");
+                btn.textContent="Показать ближайшую улицу ко мне";
+                btn.style.position="absolute";
+                btn.style.top="10px";
+                btn.style.left="50%";
+                btn.style.transform="translateX(-50%)";
+                btn.style.zIndex=1000;
+                btn.style.padding="8px 12px";
+                btn.style.background="white";
+                btn.style.border="1px solid #888";
+                btn.style.borderRadius="6px";
+                btn.onclick=showNearestStreet;
+                document.body.appendChild(btn);
+
+                // ==== Плавающий рекламный блок ====
+                var ad=document.createElement("div");
+                ad.innerHTML='<div style="font-size:15px;font-weight:bold;">⚡Карта предоставлена телеграм каналом Schwebezeit</div><div style="font-size:13px;">Нажми, перейди и подпишись</div>';
+                ad.style.position='fixed';
+                ad.style.bottom='20px';
+                ad.style.right='20px';
+                ad.style.zIndex='9999';
+                ad.style.background='white';
+                ad.style.borderRadius='12px';
+                ad.style.padding='10px 15px';
+                ad.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)';
+                ad.style.fontFamily='sans-serif';
+                ad.style.cursor='pointer';
+                ad.style.minWidth='200px';
+                ad.onclick=function(){ window.open('https://t.me/schwebezeit','_blank'); };
+                document.body.appendChild(ad);
+                // ================================
+
+            } catch(e) {
+                console.error("MAP init error:",e);
             }
-
-            var btn=document.createElement("button");
-            btn.textContent="Показать ближайшую улицу ко мне";
-            btn.style.position="absolute";
-            btn.style.top="10px";
-            btn.style.left="50%";
-            btn.style.transform="translateX(-50%)";
-            btn.style.zIndex=1000;
-            btn.style.padding="8px 12px";
-            btn.style.background="white";
-            btn.style.border="1px solid #888";
-            btn.style.borderRadius="6px";
-            btn.onclick=showNearestStreet;
-            document.body.appendChild(btn);
-
-        } catch(e) {
-            console.error("MAP init error:",e);
-        }
-    });
-    </script>
-    </body>
+        });
+        </script>
+        </body>
 <script>
     
     
-            var map_cb990c46678192795f9b23dbb7221af3 = L.map(
-                "map_cb990c46678192795f9b23dbb7221af3",
+            var map_05e6d10444cee402567c138543ff2246 = L.map(
+                "map_05e6d10444cee402567c138543ff2246",
                 {
                     center: [51.2562, 7.1508],
                     crs: L.CRS.EPSG3857,
@@ -213,7 +233,7 @@
 
         
     
-            var tile_layer_fab30775293f90407e6ac490739e9943 = L.tileLayer(
+            var tile_layer_e273ccfe31e6781f96029793200aa191 = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
   "minZoom": 0,
@@ -230,306 +250,306 @@
             );
         
     
-            tile_layer_fab30775293f90407e6ac490739e9943.addTo(map_cb990c46678192795f9b23dbb7221af3);
+            tile_layer_e273ccfe31e6781f96029793200aa191.addTo(map_05e6d10444cee402567c138543ff2246);
         
     
-            var marker_6862994fc43c6c95d778ab7b020cf4f2 = L.marker(
+            var marker_8bc37d32e99b7fa19cd7b91d370f5885 = L.marker(
                 [51.2652057, 7.1492367],
                 {
 }
-            ).addTo(map_cb990c46678192795f9b23dbb7221af3);
+            ).addTo(map_05e6d10444cee402567c138543ff2246);
         
     
-        var popup_eac1ea444cb3fb52343534c2bf7ba599 = L.popup({
+        var popup_e54c1e2585ac0920c4ac99bad556d132 = L.popup({
   "maxWidth": "100%",
 });
 
         
             
-                var html_4cffbc285439310305963317c544b7bd = $(`<div id="html_4cffbc285439310305963317c544b7bd" style="width: 100.0%; height: 100.0%;">Flensburger Str</div>`)[0];
-                popup_eac1ea444cb3fb52343534c2bf7ba599.setContent(html_4cffbc285439310305963317c544b7bd);
+                var html_1cbb569d1a210512f2920b34660911fb = $(`<div id="html_1cbb569d1a210512f2920b34660911fb" style="width: 100.0%; height: 100.0%;">Flensburger Str</div>`)[0];
+                popup_e54c1e2585ac0920c4ac99bad556d132.setContent(html_1cbb569d1a210512f2920b34660911fb);
             
         
 
-        marker_6862994fc43c6c95d778ab7b020cf4f2.bindPopup(popup_eac1ea444cb3fb52343534c2bf7ba599)
+        marker_8bc37d32e99b7fa19cd7b91d370f5885.bindPopup(popup_e54c1e2585ac0920c4ac99bad556d132)
         ;
 
         
     
     
-            var marker_4443f20da097c23b87a1e6b5d5f4300e = L.marker(
-                [51.250673, 7.1471719],
+            var marker_59bf554ebb6b30bde2382f7dc10efe35 = L.marker(
+                [51.2672592, 7.1507361],
                 {
 }
-            ).addTo(map_cb990c46678192795f9b23dbb7221af3);
+            ).addTo(map_05e6d10444cee402567c138543ff2246);
         
     
-        var popup_ce8964bd72bad81cb622d5f620f23823 = L.popup({
+        var popup_6492e449e0a4863948e3cde47548db37 = L.popup({
   "maxWidth": "100%",
 });
 
         
             
-                var html_6f7e36e26c5071e3f2c59463e90111e5 = $(`<div id="html_6f7e36e26c5071e3f2c59463e90111e5" style="width: 100.0%; height: 100.0%;">Weststr</div>`)[0];
-                popup_ce8964bd72bad81cb622d5f620f23823.setContent(html_6f7e36e26c5071e3f2c59463e90111e5);
+                var html_b0e1b4aa32d40b44bee9042e71111271 = $(`<div id="html_b0e1b4aa32d40b44bee9042e71111271" style="width: 100.0%; height: 100.0%;">Schleswiger Str</div>`)[0];
+                popup_6492e449e0a4863948e3cde47548db37.setContent(html_b0e1b4aa32d40b44bee9042e71111271);
             
         
 
-        marker_4443f20da097c23b87a1e6b5d5f4300e.bindPopup(popup_ce8964bd72bad81cb622d5f620f23823)
+        marker_59bf554ebb6b30bde2382f7dc10efe35.bindPopup(popup_6492e449e0a4863948e3cde47548db37)
         ;
 
         
     
     
-            var marker_1fe28d2ce5d0f7663dc4f996b5e25063 = L.marker(
-                [51.2663934, 7.1486734],
-                {
-}
-            ).addTo(map_cb990c46678192795f9b23dbb7221af3);
-        
-    
-        var popup_a5aa57a0b24b4ab60184681eb1eb1b7e = L.popup({
-  "maxWidth": "100%",
-});
-
-        
-            
-                var html_da6aa0f1eaaa870d7abe87decfe8276a = $(`<div id="html_da6aa0f1eaaa870d7abe87decfe8276a" style="width: 100.0%; height: 100.0%;">Schleswiger Str</div>`)[0];
-                popup_a5aa57a0b24b4ab60184681eb1eb1b7e.setContent(html_da6aa0f1eaaa870d7abe87decfe8276a);
-            
-        
-
-        marker_1fe28d2ce5d0f7663dc4f996b5e25063.bindPopup(popup_a5aa57a0b24b4ab60184681eb1eb1b7e)
-        ;
-
-        
-    
-    
-            var marker_dc3287be6c76c949df4bed05dddac409 = L.marker(
+            var marker_1c8423b2ae05e9e730dc820f5ab43ebb = L.marker(
                 [51.2593657, 7.1370577],
                 {
 }
-            ).addTo(map_cb990c46678192795f9b23dbb7221af3);
+            ).addTo(map_05e6d10444cee402567c138543ff2246);
         
     
-        var popup_f9476d32fd3296bd37323fd012d31a34 = L.popup({
+        var popup_5da4227abc4abb90a7d97cd6e48de3c1 = L.popup({
   "maxWidth": "100%",
 });
 
         
             
-                var html_73c411f178161a4f6ba333253e73dcf7 = $(`<div id="html_73c411f178161a4f6ba333253e73dcf7" style="width: 100.0%; height: 100.0%;">Marienstr</div>`)[0];
-                popup_f9476d32fd3296bd37323fd012d31a34.setContent(html_73c411f178161a4f6ba333253e73dcf7);
+                var html_371ffaf3155e244d4f6fd67908886c60 = $(`<div id="html_371ffaf3155e244d4f6fd67908886c60" style="width: 100.0%; height: 100.0%;">Marienstr</div>`)[0];
+                popup_5da4227abc4abb90a7d97cd6e48de3c1.setContent(html_371ffaf3155e244d4f6fd67908886c60);
             
         
 
-        marker_dc3287be6c76c949df4bed05dddac409.bindPopup(popup_f9476d32fd3296bd37323fd012d31a34)
+        marker_1c8423b2ae05e9e730dc820f5ab43ebb.bindPopup(popup_5da4227abc4abb90a7d97cd6e48de3c1)
         ;
 
         
     
     
-            var marker_179a390dc8043d58cd3661eb6e0fc657 = L.marker(
+            var marker_ccb2f2cce17883e2d8c666ea8a519a7f = L.marker(
                 [51.2665508, 7.1511802],
                 {
 }
-            ).addTo(map_cb990c46678192795f9b23dbb7221af3);
+            ).addTo(map_05e6d10444cee402567c138543ff2246);
         
     
-        var popup_eaaf78bac865f62d17a6607853c9a5bc = L.popup({
+        var popup_1d0684dda8292bbfc5bc73ebcf69942f = L.popup({
   "maxWidth": "100%",
 });
 
         
             
-                var html_aaf5d8652bf951bafd55ed3fa3766be5 = $(`<div id="html_aaf5d8652bf951bafd55ed3fa3766be5" style="width: 100.0%; height: 100.0%;">Kieler Str</div>`)[0];
-                popup_eaaf78bac865f62d17a6607853c9a5bc.setContent(html_aaf5d8652bf951bafd55ed3fa3766be5);
+                var html_e36a17207868217fbf469735d336fc4e = $(`<div id="html_e36a17207868217fbf469735d336fc4e" style="width: 100.0%; height: 100.0%;">Kieler Str</div>`)[0];
+                popup_1d0684dda8292bbfc5bc73ebcf69942f.setContent(html_e36a17207868217fbf469735d336fc4e);
             
         
 
-        marker_179a390dc8043d58cd3661eb6e0fc657.bindPopup(popup_eaaf78bac865f62d17a6607853c9a5bc)
+        marker_ccb2f2cce17883e2d8c666ea8a519a7f.bindPopup(popup_1d0684dda8292bbfc5bc73ebcf69942f)
         ;
 
         
     
     
-            var marker_40fe0d87a058053eeaea5e442c9328f8 = L.marker(
+            var marker_3d29799c5755fb7c303204b2bd9e2518 = L.marker(
                 [51.2530666, 7.1451499],
                 {
 }
-            ).addTo(map_cb990c46678192795f9b23dbb7221af3);
+            ).addTo(map_05e6d10444cee402567c138543ff2246);
         
     
-        var popup_8f052de2a835b4627e6309884b59b8a1 = L.popup({
+        var popup_b1f90aa5b540e2feb8ca7e65b57ffa6d = L.popup({
   "maxWidth": "100%",
 });
 
         
             
-                var html_9779bbaab8c9b6e7ba1907aadea84f8a = $(`<div id="html_9779bbaab8c9b6e7ba1907aadea84f8a" style="width: 100.0%; height: 100.0%;">Kleeblatt</div>`)[0];
-                popup_8f052de2a835b4627e6309884b59b8a1.setContent(html_9779bbaab8c9b6e7ba1907aadea84f8a);
+                var html_8e5a2d0c07ec23e2ba10e7f1e950cef5 = $(`<div id="html_8e5a2d0c07ec23e2ba10e7f1e950cef5" style="width: 100.0%; height: 100.0%;">Kleeblatt</div>`)[0];
+                popup_b1f90aa5b540e2feb8ca7e65b57ffa6d.setContent(html_8e5a2d0c07ec23e2ba10e7f1e950cef5);
             
         
 
-        marker_40fe0d87a058053eeaea5e442c9328f8.bindPopup(popup_8f052de2a835b4627e6309884b59b8a1)
+        marker_3d29799c5755fb7c303204b2bd9e2518.bindPopup(popup_b1f90aa5b540e2feb8ca7e65b57ffa6d)
         ;
 
         
     
     
-            var marker_4758141ff4076f219d8df723c220fd1c = L.marker(
-                [51.2652681, 7.1374758],
-                {
-}
-            ).addTo(map_cb990c46678192795f9b23dbb7221af3);
-        
-    
-        var popup_9b089136b9750020f5518c12752a88bb = L.popup({
-  "maxWidth": "100%",
-});
-
-        
-            
-                var html_f354550f8c57abc2e76c189b941b72b5 = $(`<div id="html_f354550f8c57abc2e76c189b941b72b5" style="width: 100.0%; height: 100.0%;">Wiesenstr</div>`)[0];
-                popup_9b089136b9750020f5518c12752a88bb.setContent(html_f354550f8c57abc2e76c189b941b72b5);
-            
-        
-
-        marker_4758141ff4076f219d8df723c220fd1c.bindPopup(popup_9b089136b9750020f5518c12752a88bb)
-        ;
-
-        
-    
-    
-            var marker_d941452f6160c92c2902826e2038df8b = L.marker(
-                [51.2527569, 7.1422081],
-                {
-}
-            ).addTo(map_cb990c46678192795f9b23dbb7221af3);
-        
-    
-        var popup_9201fdaa02e56a36ac00f81b9dbb82c1 = L.popup({
-  "maxWidth": "100%",
-});
-
-        
-            
-                var html_7287d126498d9ab073e233d3beea5e80 = $(`<div id="html_7287d126498d9ab073e233d3beea5e80" style="width: 100.0%; height: 100.0%;">Auf dem Johannisberg</div>`)[0];
-                popup_9201fdaa02e56a36ac00f81b9dbb82c1.setContent(html_7287d126498d9ab073e233d3beea5e80);
-            
-        
-
-        marker_d941452f6160c92c2902826e2038df8b.bindPopup(popup_9201fdaa02e56a36ac00f81b9dbb82c1)
-        ;
-
-        
-    
-    
-            var marker_6d67cb4732d656384090f272438b50cc = L.marker(
-                [51.2532765, 7.1397035],
-                {
-}
-            ).addTo(map_cb990c46678192795f9b23dbb7221af3);
-        
-    
-        var popup_c0cfdc433725b3e07cfe9bf5ec02f475 = L.popup({
-  "maxWidth": "100%",
-});
-
-        
-            
-                var html_6f147768837a29ac48c590197f4f5fe3 = $(`<div id="html_6f147768837a29ac48c590197f4f5fe3" style="width: 100.0%; height: 100.0%;">Südstr</div>`)[0];
-                popup_c0cfdc433725b3e07cfe9bf5ec02f475.setContent(html_6f147768837a29ac48c590197f4f5fe3);
-            
-        
-
-        marker_6d67cb4732d656384090f272438b50cc.bindPopup(popup_c0cfdc433725b3e07cfe9bf5ec02f475)
-        ;
-
-        
-    
-    
-            var marker_fd87838c0539921898a1ec767890efff = L.marker(
-                [51.2532765, 7.1397035],
-                {
-}
-            ).addTo(map_cb990c46678192795f9b23dbb7221af3);
-        
-    
-        var popup_a2f53a0f67e55545692dd98c1ed6819b = L.popup({
-  "maxWidth": "100%",
-});
-
-        
-            
-                var html_4e9ad0ed5d819d3ecaa938e42ac29310 = $(`<div id="html_4e9ad0ed5d819d3ecaa938e42ac29310" style="width: 100.0%; height: 100.0%;">Südstr</div>`)[0];
-                popup_a2f53a0f67e55545692dd98c1ed6819b.setContent(html_4e9ad0ed5d819d3ecaa938e42ac29310);
-            
-        
-
-        marker_fd87838c0539921898a1ec767890efff.bindPopup(popup_a2f53a0f67e55545692dd98c1ed6819b)
-        ;
-
-        
-    
-    
-            var marker_4276842f946a28ffc49c41d676b87e3a = L.marker(
-                [51.2532765, 7.1397035],
-                {
-}
-            ).addTo(map_cb990c46678192795f9b23dbb7221af3);
-        
-    
-        var popup_c84e004fca5e26014e9f676ab06f05e1 = L.popup({
-  "maxWidth": "100%",
-});
-
-        
-            
-                var html_e8e5a6a35e8d9659112ce960bddb5e8d = $(`<div id="html_e8e5a6a35e8d9659112ce960bddb5e8d" style="width: 100.0%; height: 100.0%;">Südstr</div>`)[0];
-                popup_c84e004fca5e26014e9f676ab06f05e1.setContent(html_e8e5a6a35e8d9659112ce960bddb5e8d);
-            
-        
-
-        marker_4276842f946a28ffc49c41d676b87e3a.bindPopup(popup_c84e004fca5e26014e9f676ab06f05e1)
-        ;
-
-        
-    
-    
-            var marker_d30ded127adba222e65be42069fb0897 = L.marker(
+            var marker_c710f1cdd1cac5011f22627ce897980d = L.marker(
                 [51.2650662, 7.14844],
                 {
 }
-            ).addTo(map_cb990c46678192795f9b23dbb7221af3);
+            ).addTo(map_05e6d10444cee402567c138543ff2246);
         
     
-        var popup_1f3b4c2a122501816bb3e28256b89cb4 = L.popup({
+        var popup_8d8ab31d64d34e2d93860296f6c441aa = L.popup({
   "maxWidth": "100%",
 });
 
         
             
-                var html_a3c63d81c632a2af5adfc259f917372b = $(`<div id="html_a3c63d81c632a2af5adfc259f917372b" style="width: 100.0%; height: 100.0%;">Holsteiner Str</div>`)[0];
-                popup_1f3b4c2a122501816bb3e28256b89cb4.setContent(html_a3c63d81c632a2af5adfc259f917372b);
+                var html_0b4c941f3c4a56fb14445bf0b0deaefd = $(`<div id="html_0b4c941f3c4a56fb14445bf0b0deaefd" style="width: 100.0%; height: 100.0%;">Holsteiner Str</div>`)[0];
+                popup_8d8ab31d64d34e2d93860296f6c441aa.setContent(html_0b4c941f3c4a56fb14445bf0b0deaefd);
             
         
 
-        marker_d30ded127adba222e65be42069fb0897.bindPopup(popup_1f3b4c2a122501816bb3e28256b89cb4)
+        marker_c710f1cdd1cac5011f22627ce897980d.bindPopup(popup_8d8ab31d64d34e2d93860296f6c441aa)
         ;
 
         
     
     
-            map_cb990c46678192795f9b23dbb7221af3.fitBounds(
-                [[51.2652057, 7.1492367], [51.250673, 7.1471719], [51.2663934, 7.1486734], [51.2593657, 7.1370577], [51.2665508, 7.1511802], [51.2530666, 7.1451499], [51.2652681, 7.1374758], [51.2527569, 7.1422081], [51.2532765, 7.1397035], [51.2532765, 7.1397035], [51.2532765, 7.1397035], [51.2650662, 7.14844]],
+            var marker_4b84a7a957e7d8d73fdb3443c9f4076a = L.marker(
+                [51.2527569, 7.1422081],
+                {
+}
+            ).addTo(map_05e6d10444cee402567c138543ff2246);
+        
+    
+        var popup_dc1278ce89f82866373a441652d4acf7 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_2495374fd6c2c98d8fc8f677ae210c90 = $(`<div id="html_2495374fd6c2c98d8fc8f677ae210c90" style="width: 100.0%; height: 100.0%;">Auf dem Johannisberg</div>`)[0];
+                popup_dc1278ce89f82866373a441652d4acf7.setContent(html_2495374fd6c2c98d8fc8f677ae210c90);
+            
+        
+
+        marker_4b84a7a957e7d8d73fdb3443c9f4076a.bindPopup(popup_dc1278ce89f82866373a441652d4acf7)
+        ;
+
+        
+    
+    
+            var marker_807b87da2b1e6332abcbfc2d9254a65e = L.marker(
+                [51.2511698, 7.1497121],
+                {
+}
+            ).addTo(map_05e6d10444cee402567c138543ff2246);
+        
+    
+        var popup_569df9169536fe7b7ed1c806f31f179a = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_22722a6e935ffc8f9878c908e7722e37 = $(`<div id="html_22722a6e935ffc8f9878c908e7722e37" style="width: 100.0%; height: 100.0%;">Weststr</div>`)[0];
+                popup_569df9169536fe7b7ed1c806f31f179a.setContent(html_22722a6e935ffc8f9878c908e7722e37);
+            
+        
+
+        marker_807b87da2b1e6332abcbfc2d9254a65e.bindPopup(popup_569df9169536fe7b7ed1c806f31f179a)
+        ;
+
+        
+    
+    
+            var marker_56c69e24041a33d48669c0702823230d = L.marker(
+                [51.2652681, 7.1374758],
+                {
+}
+            ).addTo(map_05e6d10444cee402567c138543ff2246);
+        
+    
+        var popup_9ea8716cb26e20bac642ff4cc89d8c19 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_4f374499862a455eeb17f6199f298b61 = $(`<div id="html_4f374499862a455eeb17f6199f298b61" style="width: 100.0%; height: 100.0%;">Wiesenstr</div>`)[0];
+                popup_9ea8716cb26e20bac642ff4cc89d8c19.setContent(html_4f374499862a455eeb17f6199f298b61);
+            
+        
+
+        marker_56c69e24041a33d48669c0702823230d.bindPopup(popup_9ea8716cb26e20bac642ff4cc89d8c19)
+        ;
+
+        
+    
+    
+            var marker_09287f28c08268463f33cbedc161d531 = L.marker(
+                [51.2490396, 7.1470524],
+                {
+}
+            ).addTo(map_05e6d10444cee402567c138543ff2246);
+        
+    
+        var popup_00a92335d77b7f7d5450413a2b111a55 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_af8451cc808842db5810c6ac65e96d78 = $(`<div id="html_af8451cc808842db5810c6ac65e96d78" style="width: 100.0%; height: 100.0%;">Südstr</div>`)[0];
+                popup_00a92335d77b7f7d5450413a2b111a55.setContent(html_af8451cc808842db5810c6ac65e96d78);
+            
+        
+
+        marker_09287f28c08268463f33cbedc161d531.bindPopup(popup_00a92335d77b7f7d5450413a2b111a55)
+        ;
+
+        
+    
+    
+            var marker_ee386005b5915b7919db439fdba6714b = L.marker(
+                [51.2490396, 7.1470524],
+                {
+}
+            ).addTo(map_05e6d10444cee402567c138543ff2246);
+        
+    
+        var popup_dd8a680df7eb6532a21b98dd96763928 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_9cfc6d36c5ecc4d89a1e47fc6b33c610 = $(`<div id="html_9cfc6d36c5ecc4d89a1e47fc6b33c610" style="width: 100.0%; height: 100.0%;">Südstr</div>`)[0];
+                popup_dd8a680df7eb6532a21b98dd96763928.setContent(html_9cfc6d36c5ecc4d89a1e47fc6b33c610);
+            
+        
+
+        marker_ee386005b5915b7919db439fdba6714b.bindPopup(popup_dd8a680df7eb6532a21b98dd96763928)
+        ;
+
+        
+    
+    
+            var marker_b9bceb21a3a47242ee190efbf3d5a876 = L.marker(
+                [51.2490396, 7.1470524],
+                {
+}
+            ).addTo(map_05e6d10444cee402567c138543ff2246);
+        
+    
+        var popup_3fa4a1837dfd613a2072d78de82f5d90 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_5ba8adb0337bdf159dff7429a474c768 = $(`<div id="html_5ba8adb0337bdf159dff7429a474c768" style="width: 100.0%; height: 100.0%;">Südstr</div>`)[0];
+                popup_3fa4a1837dfd613a2072d78de82f5d90.setContent(html_5ba8adb0337bdf159dff7429a474c768);
+            
+        
+
+        marker_b9bceb21a3a47242ee190efbf3d5a876.bindPopup(popup_3fa4a1837dfd613a2072d78de82f5d90)
+        ;
+
+        
+    
+    
+            map_05e6d10444cee402567c138543ff2246.fitBounds(
+                [[51.2652057, 7.1492367], [51.2672592, 7.1507361], [51.2593657, 7.1370577], [51.2665508, 7.1511802], [51.2530666, 7.1451499], [51.2650662, 7.14844], [51.2527569, 7.1422081], [51.2511698, 7.1497121], [51.2652681, 7.1374758], [51.2490396, 7.1470524], [51.2490396, 7.1470524], [51.2490396, 7.1470524]],
                 {}
             );
         
     
-            var locate_control_6c670571ab7c3468eeb46fcf579f29fd = L.control.locate(
+            var locate_control_2b110ea27ba4f35e85c16fe97bf85b13 = L.control.locate(
                 {}
-            ).addTo(map_cb990c46678192795f9b23dbb7221af3);
+            ).addTo(map_05e6d10444cee402567c138543ff2246);
             
         
 </script>
