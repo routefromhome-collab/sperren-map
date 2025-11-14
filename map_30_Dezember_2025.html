@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_d862a1e772e0d558532e2c4bf3057361 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-locatecontrol/0.66.2/L.Control.Locate.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-locatecontrol/0.66.2/L.Control.Locate.min.css"/>
+</head>
+<body>
+    
+    
+            <div class="folium-map" id="map_d862a1e772e0d558532e2c4bf3057361" ></div>
+        
+
+        <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            try {
+                var MAP = null;
+                MAP = map_d862a1e772e0d558532e2c4bf3057361;
+                if (!MAP) {
+                    MAP = Object.values(window).find(v => v && v._leaflet_id && v instanceof L.Map);
+                }
+                if (!MAP) {
+                    console.error("Map not found");
+                    return;
+                }
+
+                var STREETS = [{"name": "boettingerweg", "coords": [[51.2406896, 7.1053709], [51.2405123, 7.1055062], [51.2404734, 7.1055359], [51.2404145, 7.1055808], [51.2404145, 7.1055808], [51.2403262, 7.1056508], [51.2401893, 7.1057565], [51.24, 7.1059034], [51.2398734, 7.1060019], [51.2397431, 7.1061033], [51.2395661, 7.1062406], [51.2395661, 7.1062406], [51.2394383, 7.1063397], [51.2392901, 7.106454], [51.2391242, 7.1065572], [51.2390256, 7.1066056], [51.2389182, 7.1066181], [51.238816, 7.1065899], [51.2387428, 7.1065634], [51.2386722, 7.1065191], [51.2385684, 7.1064268], [51.2384422, 7.106265], [51.2381536, 7.1058915], [51.2380604, 7.1057701], [51.2380186, 7.1057171], [51.237989, 7.1056855], [51.237955, 7.1056709], [51.237927, 7.1056885], [51.2379163, 7.1057428], [51.2379139, 7.1057906], [51.237932, 7.105866], [51.2379618, 7.1059186], [51.2381378, 7.1061416], [51.2382381, 7.1062996], [51.2383483, 7.1064937], [51.2384438, 7.1067097], [51.2385069, 7.1069467], [51.2385367, 7.1071633], [51.238529, 7.1073583], [51.238484, 7.1075404], [51.2383827, 7.1078578], [51.2382763, 7.1083199], [51.2382287, 7.1087268], [51.2381626, 7.1091159], [51.2381305, 7.1092232], [51.2380863, 7.1092704], [51.2379899, 7.1092998], [51.2378895, 7.1093267], [51.23781, 7.1093956], [51.2377179, 7.1095998], [51.2377091, 7.109654], [51.2377094, 7.1097409], [51.2377136, 7.1098252], [51.2377329, 7.1100144], [51.2377721, 7.1101933], [51.2379021, 7.1107908], [51.2408252, 7.105283], [51.2406896, 7.1053709]]}, {"name": "königshöher weg", "coords": [[51.2456078, 7.1281443], [51.2456235, 7.1281857], [51.2456275, 7.128197], [51.2459683, 7.1291562], [51.2461251, 7.1295909], [51.2461381, 7.1296489], [51.2461332, 7.1297164], [51.2461296, 7.1297574], [51.2460406, 7.1299716], [51.2459858, 7.1301343], [51.2456078, 7.1281443], [51.2452935, 7.1272869], [51.2452552, 7.1272443], [51.2452104, 7.1272098], [51.2445005, 7.1267436], [51.2426172, 7.1255124], [51.2418063, 7.1249839], [51.2411692, 7.1241183], [51.2407907, 7.1235825], [51.2403463, 7.1232067], [51.2403201, 7.1231857], [51.2401285, 7.1230209], [51.2392968, 7.1223302], [51.2385511, 7.1208533], [51.2426172, 7.1255124], [51.2427114, 7.1254224], [51.2429145, 7.1253526], [51.2431182, 7.1253067], [51.2438557, 7.1252748], [51.2439699, 7.1252367], [51.2439904, 7.1251891], [51.243991, 7.1251378], [51.2439724, 7.1250887], [51.2439156, 7.1250661], [51.2437588, 7.1250592]]}, {"name": "selmaweg", "coords": [[51.2407235, 7.1160967], [51.2406232, 7.1161], [51.2404117, 7.1161194], [51.2397224, 7.1162939], [51.2392478, 7.116206], [51.2388301, 7.1163261], [51.2420149, 7.1149509], [51.2420629, 7.1148564], [51.2420819, 7.1145555], [51.2421018, 7.1144984], [51.2422687, 7.1142373], [51.2423849, 7.1140591], [51.2426173, 7.1138582], [51.242737, 7.1137727], [51.241675, 7.113174], [51.2416908, 7.1135186], [51.2416966, 7.113611], [51.2417059, 7.1136723], [51.2417339, 7.1138172], [51.2417697, 7.1139878], [51.2418312, 7.1143153], [51.2418811, 7.1145385], [51.2419451, 7.1147801], [51.2419567, 7.1148072], [51.2419849, 7.1148696], [51.2420149, 7.1149509], [51.2420395, 7.11503], [51.2420459, 7.1150576], [51.2420461, 7.1150837], [51.2419629, 7.1160072], [51.2419493, 7.1160929], [51.2419331, 7.11616], [51.2418996, 7.1162007], [51.2418873, 7.1162041], [51.2418449, 7.116224], [51.2417759, 7.1162237], [51.2417289, 7.1162173], [51.241687, 7.1162043], [51.2415149, 7.1161527], [51.2413348, 7.1160963], [51.2410201, 7.1160474], [51.2409248, 7.1160445], [51.2407864, 7.116077], [51.2407235, 7.1160967], [51.241689, 7.1099857], [51.241675, 7.1110806], [51.2416717, 7.1129116], [51.2416751, 7.1130602], [51.241675, 7.113174], [51.2412988, 7.116622], [51.2413348, 7.1160963], [51.2407235, 7.1160967], [51.2408139, 7.1163525], [51.2408702, 7.1164276], [51.2410255, 7.1165402], [51.2410552, 7.1166511], [51.241023, 7.1169332], [51.2410389, 7.1170565], [51.2411556, 7.1172912], [51.2413638, 7.1177715], [51.2414446, 7.1178996], [51.2413471, 7.1190421], [51.2413361, 7.1192792], [51.2413244, 7.1196223]]}];
+                
+                function haversine_m(a,b) {
+                    var R = 6371000;
+                    var φ1 = a[0]*Math.PI/180, φ2 = b[0]*Math.PI/180;
+                    var dφ = (b[0]-a[0])*Math.PI/180;
+                    var dλ = (b[1]-a[1])*Math.PI/180;
+                    var sa = Math.sin(dφ/2)*Math.sin(dφ/2) + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)*Math.sin(dλ/2);
+                    var c = 2*Math.atan2(Math.sqrt(sa), Math.sqrt(1-sa));
+                    return R*c;
+                }
+
+                function closestPointOnSegment(p, a, b) {
+                    var latScale = Math.cos(p[0]*Math.PI/180);
+                    var ax=a[0], ay=a[1]*latScale;
+                    var bx=b[0], by=b[1]*latScale;
+                    var px=p[0], py=p[1]*latScale;
+                    var vx=bx-ax, vy=by-ay;
+                    var wx=px-ax, wy=py-ay;
+                    var vlen2 = vx*vx + vy*vy;
+                    if (vlen2===0) return a.slice();
+                    var t = (vx*wx + vy*wy) / vlen2;
+                    t = Math.max(0, Math.min(1,t));
+                    var cx=ax+vx*t, cy=ay+vy*t;
+                    return [cx, cy/latScale];
+                }
+
+                function nearestPointOnPolyline(p, coords) {
+                    if (!coords || coords.length===0) return null;
+                    var best=null, bestDist=Infinity;
+                    if (coords.length===1) {
+                        return {point:coords[0], dist:haversine_m(p,coords[0])};
+                    }
+                    for (var i=0;i<coords.length-1;i++) {
+                        var a=coords[i], b=coords[i+1];
+                        var c=closestPointOnSegment(p,a,b);
+                        var d=haversine_m(p,c);
+                        if (d<bestDist) {
+                            bestDist=d;
+                            best={point:c,dist:d};
+                        }
+                    }
+                    return best;
+                }
+                
+
+                function showNearestStreet() {
+                    if (!navigator.geolocation) {
+                        alert("Геолокация не поддерживается");
+                        return;
+                    }
+                    navigator.geolocation.getCurrentPosition(function(pos) {
+                        var user=[pos.coords.latitude,pos.coords.longitude];
+                        var bestStreet=null, bestInfo=null;
+
+                        for (var si=0;si<STREETS.length;si++) {
+                            var st=STREETS[si];
+                            var coords=st.coords||[];
+                            if (!coords.length) continue;                          
+                            var flat=(Array.isArray(coords[0]) && Array.isArray(coords[0][0]))? coords.flat():coords;
+                            var info=nearestPointOnPolyline(user,flat);
+                            if (!info) continue;
+                            if (!bestInfo || info.dist<bestInfo.dist) {
+                                bestInfo=info;
+                                bestStreet={name:st.name, coords:flat};
+                            }
+                        }
+
+                        if (!bestStreet || !bestInfo) {
+                            alert("Не удалось найти ближайшую улицу");
+                            return;
+                        }
+
+                        var nearPt=bestInfo.point;
+                        var meters=Math.round(bestInfo.dist);
+                        var walkMin=Math.max(1, Math.round((meters/1000)/5*60));
+
+                        MAP.flyTo(nearPt,17);
+
+                        if (!window._marks) window._marks=[];
+                        window._marks.forEach(function(l){ try { MAP.removeLayer(l); } catch(e){} });
+                        window._marks=[];
+
+                        setTimeout(function(){
+                            var m=L.marker(nearPt).addTo(MAP);
+                            m.bindPopup("<div style=\"font-size:14px;\">"+
+                            "Ближайшая улица: <b>"+(bestStreet.name||"—")+"</b><br><br>"+
+                            "Расстояние: "+meters+" м<br>"+
+                            "Пешком: примерно "+walkMin+" мин<br><br>"+
+                            "<a href=\"https://www.google.com/maps/search/?api=1&query="+nearPt[0]+","+nearPt[1]+"\" target=\"_blank\""+
+                            " style=\"display:inline-block;padding:8px 14px;background:#4285F4;color:white;border-radius:6px;text-decoration:none;font-                                    weight:600;box-shadow:0 2px 4px rgba(0,0,0,0.2);transition:0.2s;\""+
+                            " onmouseover=\"this.style.background='#2f6ae1'\""+
+                            " onmouseout=\"this.style.background='#4285F4'\""+
+                            ">🔍 Открыть в Google Maps</a>"+
+                            "</div>").openPopup();
+                            window._marks.push(m);
+                        },650);
+
+                        var um=L.circleMarker(user,{radius:6,color:'#333',fillColor:'#fff',weight:2}).addTo(MAP);
+                        um.bindPopup("Вы здесь");
+                        window._marks.push(um);
+
+                    },function(err){ alert("Ошибка геопозиции: "+err.message); },
+                    {enableHighAccuracy:true,timeout:10000,maximumAge:0});
+                }
+
+                // Кнопка "Показать ближайшую улицу"
+                var btn=document.createElement("button");
+                btn.textContent="Показать ближайшую улицу ко мне";
+                btn.style.position="absolute";
+                btn.style.top="10px";
+                btn.style.left="50%";
+                btn.style.transform="translateX(-50%)";
+                btn.style.zIndex=1000;
+                btn.style.padding="8px 12px";
+                btn.style.background="white";
+                btn.style.border="1px solid #888";
+                btn.style.borderRadius="6px";
+                btn.onclick=showNearestStreet;
+                document.body.appendChild(btn);
+
+                // ==== Плавающий рекламный блок ====
+                var ad=document.createElement("div");
+                ad.innerHTML='<div style="font-size:15px;font-weight:bold;">⚡Карта предоставлена телеграм каналом Schwebezeit</div><div style="font-size:13px;">Нажми, перейди и подпишись</div>';
+                ad.style.position='fixed';
+                ad.style.bottom='20px';
+                ad.style.right='20px';
+                ad.style.zIndex='9999';
+                ad.style.background='white';
+                ad.style.borderRadius='12px';
+                ad.style.padding='10px 15px';
+                ad.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)';
+                ad.style.fontFamily='sans-serif';
+                ad.style.cursor='pointer';
+                ad.style.minWidth='200px';
+                ad.onclick=function(){ window.open('https://t.me/schwebezeit','_blank'); };
+                document.body.appendChild(ad);
+                // ================================
+
+            } catch(e) {
+                console.error("MAP init error:",e);
+            }
+        });
+        </script>
+        </body>
+<script>
+    
+    
+            var map_d862a1e772e0d558532e2c4bf3057361 = L.map(
+                "map_d862a1e772e0d558532e2c4bf3057361",
+                {
+                    center: [51.2562, 7.1508],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 12,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_5d0dfab884327d7aba51630befc9ec52 = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_5d0dfab884327d7aba51630befc9ec52.addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+            var marker_d74025d87b2ecb7956763d9668d15b21 = L.marker(
+                [51.2461641, 7.1300088],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_d4e23d13e61faba7ac88418c9e3f959f = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_06d621e2cff10df07d996690de0163cc = $(`<div id="html_06d621e2cff10df07d996690de0163cc" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 2</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2461641,7.1300088" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_d4e23d13e61faba7ac88418c9e3f959f.setContent(html_06d621e2cff10df07d996690de0163cc);
+            
+        
+
+        marker_d74025d87b2ecb7956763d9668d15b21.bindPopup(popup_d4e23d13e61faba7ac88418c9e3f959f)
+        ;
+
+        
+    
+    
+            var marker_8892ebd5806f819e368ecb0cecda602b = L.marker(
+                [51.2462077, 7.129335],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_862652cb6827c8a4b8ea43bf47512c65 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_acf16095e68beef4bb7c401f93836279 = $(`<div id="html_acf16095e68beef4bb7c401f93836279" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 4</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2462077,7.129335" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_862652cb6827c8a4b8ea43bf47512c65.setContent(html_acf16095e68beef4bb7c401f93836279);
+            
+        
+
+        marker_8892ebd5806f819e368ecb0cecda602b.bindPopup(popup_862652cb6827c8a4b8ea43bf47512c65)
+        ;
+
+        
+    
+    
+            var marker_8f88a5e38f57179db07e58536b8fa542 = L.marker(
+                [51.2457462, 7.1289749],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_794cb7e36eed70d076894520b1301e25 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_703df1c488d46b6a87bfe53dccf42360 = $(`<div id="html_703df1c488d46b6a87bfe53dccf42360" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 5</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2457462,7.1289749" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_794cb7e36eed70d076894520b1301e25.setContent(html_703df1c488d46b6a87bfe53dccf42360);
+            
+        
+
+        marker_8f88a5e38f57179db07e58536b8fa542.bindPopup(popup_794cb7e36eed70d076894520b1301e25)
+        ;
+
+        
+    
+    
+            var marker_0fcbc5646cdead15ef42bcf7422eb5b2 = L.marker(
+                [51.2461477, 7.1291665],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_a630d235f03d4d6575fa9f4a69ea342c = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_da7ac669f15970d537c757676225c0bd = $(`<div id="html_da7ac669f15970d537c757676225c0bd" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 6</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2461477,7.1291665" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_a630d235f03d4d6575fa9f4a69ea342c.setContent(html_da7ac669f15970d537c757676225c0bd);
+            
+        
+
+        marker_0fcbc5646cdead15ef42bcf7422eb5b2.bindPopup(popup_a630d235f03d4d6575fa9f4a69ea342c)
+        ;
+
+        
+    
+    
+            var marker_9acd6fb2f1a2ecd057827f300d74662d = L.marker(
+                [51.2454862, 7.1287697],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_437a1611c1b99844733927213732d506 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_619eb0ff78db738968e6c8c6b01fc406 = $(`<div id="html_619eb0ff78db738968e6c8c6b01fc406" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 7</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2454862,7.1287697" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_437a1611c1b99844733927213732d506.setContent(html_619eb0ff78db738968e6c8c6b01fc406);
+            
+        
+
+        marker_9acd6fb2f1a2ecd057827f300d74662d.bindPopup(popup_437a1611c1b99844733927213732d506)
+        ;
+
+        
+    
+    
+            var marker_f0f63d303b7341d41348d2485d81367c = L.marker(
+                [51.2458963, 7.1283886],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_f33fa97e71eed20a1b7f68559502f2b6 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_f7217a3b64abef28769cf1f62f996694 = $(`<div id="html_f7217a3b64abef28769cf1f62f996694" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 10</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2458963,7.1283886" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_f33fa97e71eed20a1b7f68559502f2b6.setContent(html_f7217a3b64abef28769cf1f62f996694);
+            
+        
+
+        marker_f0f63d303b7341d41348d2485d81367c.bindPopup(popup_f33fa97e71eed20a1b7f68559502f2b6)
+        ;
+
+        
+    
+    
+            var marker_071a75e1d2c12fe0f971f4f1b940fbfd = L.marker(
+                [51.2461641, 7.1300088],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_645a8a2e4ec0b7eeb55e308624ad62af = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_2285a2df2babe87f26f82e9c4018c7e1 = $(`<div id="html_2285a2df2babe87f26f82e9c4018c7e1" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 2</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2461641,7.1300088" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_645a8a2e4ec0b7eeb55e308624ad62af.setContent(html_2285a2df2babe87f26f82e9c4018c7e1);
+            
+        
+
+        marker_071a75e1d2c12fe0f971f4f1b940fbfd.bindPopup(popup_645a8a2e4ec0b7eeb55e308624ad62af)
+        ;
+
+        
+    
+    
+            var marker_c442ad502f2d346153ea8682c115cadd = L.marker(
+                [51.2462077, 7.129335],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_7f8e1986ef99fcb956896e4597f81fe4 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_ce4852dd18ba9a95453c81c713949191 = $(`<div id="html_ce4852dd18ba9a95453c81c713949191" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 4</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2462077,7.129335" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_7f8e1986ef99fcb956896e4597f81fe4.setContent(html_ce4852dd18ba9a95453c81c713949191);
+            
+        
+
+        marker_c442ad502f2d346153ea8682c115cadd.bindPopup(popup_7f8e1986ef99fcb956896e4597f81fe4)
+        ;
+
+        
+    
+    
+            var marker_e6da25478ea6f078f528da323efc1586 = L.marker(
+                [51.2457462, 7.1289749],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_17f45282b39fdb03b86fa4c0d8fb2f12 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_e9f8603709f904ee0a878576365f4e45 = $(`<div id="html_e9f8603709f904ee0a878576365f4e45" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 5</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2457462,7.1289749" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_17f45282b39fdb03b86fa4c0d8fb2f12.setContent(html_e9f8603709f904ee0a878576365f4e45);
+            
+        
+
+        marker_e6da25478ea6f078f528da323efc1586.bindPopup(popup_17f45282b39fdb03b86fa4c0d8fb2f12)
+        ;
+
+        
+    
+    
+            var marker_cdafefba1f9848c1c000302c8e29e71d = L.marker(
+                [51.2461477, 7.1291665],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_e6657bb1957bdcefca77964c479e3b9f = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_1a0adf52b08c8e4affb49d9123cad3ec = $(`<div id="html_1a0adf52b08c8e4affb49d9123cad3ec" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 6</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2461477,7.1291665" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_e6657bb1957bdcefca77964c479e3b9f.setContent(html_1a0adf52b08c8e4affb49d9123cad3ec);
+            
+        
+
+        marker_cdafefba1f9848c1c000302c8e29e71d.bindPopup(popup_e6657bb1957bdcefca77964c479e3b9f)
+        ;
+
+        
+    
+    
+            var marker_03cdd3091927d150625aeb048edd2ce3 = L.marker(
+                [51.2454862, 7.1287697],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_3046405c807b351f02f5c6342cf1a29d = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_71c09223c31b9cdfc61a56989343ced1 = $(`<div id="html_71c09223c31b9cdfc61a56989343ced1" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 7</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2454862,7.1287697" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_3046405c807b351f02f5c6342cf1a29d.setContent(html_71c09223c31b9cdfc61a56989343ced1);
+            
+        
+
+        marker_03cdd3091927d150625aeb048edd2ce3.bindPopup(popup_3046405c807b351f02f5c6342cf1a29d)
+        ;
+
+        
+    
+    
+            var marker_d2655bb84b3693d9e6d4fe63955c8614 = L.marker(
+                [51.2458963, 7.1283886],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_4def10c562cd6368a07c0520fa40226c = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_36cb31f0e6373a3336a61b1ec53cd835 = $(`<div id="html_36cb31f0e6373a3336a61b1ec53cd835" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 10</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2458963,7.1283886" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_4def10c562cd6368a07c0520fa40226c.setContent(html_36cb31f0e6373a3336a61b1ec53cd835);
+            
+        
+
+        marker_d2655bb84b3693d9e6d4fe63955c8614.bindPopup(popup_4def10c562cd6368a07c0520fa40226c)
+        ;
+
+        
+    
+    
+            var marker_db0b3cd117bc92488fa6e2b7160b5fcc = L.marker(
+                [51.2461641, 7.1300088],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_187c4857152176c6d9f422550f52cfbf = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_3ec7ca43f57c47f591c13f9fd66442a5 = $(`<div id="html_3ec7ca43f57c47f591c13f9fd66442a5" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 2</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2461641,7.1300088" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_187c4857152176c6d9f422550f52cfbf.setContent(html_3ec7ca43f57c47f591c13f9fd66442a5);
+            
+        
+
+        marker_db0b3cd117bc92488fa6e2b7160b5fcc.bindPopup(popup_187c4857152176c6d9f422550f52cfbf)
+        ;
+
+        
+    
+    
+            var marker_94cf14d688006f206f290c6a5e96f392 = L.marker(
+                [51.2462077, 7.129335],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_371f9b81cfb411109c345f677279aafe = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_29d230ff15dc62b32e06f01ee93eb2c0 = $(`<div id="html_29d230ff15dc62b32e06f01ee93eb2c0" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 4</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2462077,7.129335" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_371f9b81cfb411109c345f677279aafe.setContent(html_29d230ff15dc62b32e06f01ee93eb2c0);
+            
+        
+
+        marker_94cf14d688006f206f290c6a5e96f392.bindPopup(popup_371f9b81cfb411109c345f677279aafe)
+        ;
+
+        
+    
+    
+            var marker_0e566baf3f6085a2f6cfbdd961dcc419 = L.marker(
+                [51.2457462, 7.1289749],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_0e50b42d06adf436ab428145d27c8d09 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_14bd27c9efedbb599ca163f95f2c2df1 = $(`<div id="html_14bd27c9efedbb599ca163f95f2c2df1" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 5</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2457462,7.1289749" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_0e50b42d06adf436ab428145d27c8d09.setContent(html_14bd27c9efedbb599ca163f95f2c2df1);
+            
+        
+
+        marker_0e566baf3f6085a2f6cfbdd961dcc419.bindPopup(popup_0e50b42d06adf436ab428145d27c8d09)
+        ;
+
+        
+    
+    
+            var marker_41b92f71f35eeaa29f579128a88ea305 = L.marker(
+                [51.2461477, 7.1291665],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_07db62c70e8e1cc6dea50dfb5e79c153 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_4ced3e7e790c1216283d4728bf9b7008 = $(`<div id="html_4ced3e7e790c1216283d4728bf9b7008" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 6</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2461477,7.1291665" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_07db62c70e8e1cc6dea50dfb5e79c153.setContent(html_4ced3e7e790c1216283d4728bf9b7008);
+            
+        
+
+        marker_41b92f71f35eeaa29f579128a88ea305.bindPopup(popup_07db62c70e8e1cc6dea50dfb5e79c153)
+        ;
+
+        
+    
+    
+            var marker_3df487b806f1cfc367cb6a9dfad9818d = L.marker(
+                [51.2454862, 7.1287697],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_2055eecc11e84b71364ca2e88cd607d7 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_5962813b0328b241a46d84c40b20a9db = $(`<div id="html_5962813b0328b241a46d84c40b20a9db" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 7</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2454862,7.1287697" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_2055eecc11e84b71364ca2e88cd607d7.setContent(html_5962813b0328b241a46d84c40b20a9db);
+            
+        
+
+        marker_3df487b806f1cfc367cb6a9dfad9818d.bindPopup(popup_2055eecc11e84b71364ca2e88cd607d7)
+        ;
+
+        
+    
+    
+            var marker_69d4e7197aefb5dd2d5b822e2a649a48 = L.marker(
+                [51.2458963, 7.1283886],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_eda98cddaa943edf79860df2ff88e1aa = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_8c62868dc904d2f05d34c4a45a3a0535 = $(`<div id="html_8c62868dc904d2f05d34c4a45a3a0535" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Königshöher Weg 10</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2458963,7.1283886" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_eda98cddaa943edf79860df2ff88e1aa.setContent(html_8c62868dc904d2f05d34c4a45a3a0535);
+            
+        
+
+        marker_69d4e7197aefb5dd2d5b822e2a649a48.bindPopup(popup_eda98cddaa943edf79860df2ff88e1aa)
+        ;
+
+        
+    
+    
+            var marker_6d182bccc47dc86165b80397aa23518c = L.marker(
+                [51.2418487, 7.1109218],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_b52265588b704855396be5260c56e6d8 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_71fe02d8f135aec90b66110bc4d6e7da = $(`<div id="html_71fe02d8f135aec90b66110bc4d6e7da" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Selmaweg 1</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2418487,7.1109218" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_b52265588b704855396be5260c56e6d8.setContent(html_71fe02d8f135aec90b66110bc4d6e7da);
+            
+        
+
+        marker_6d182bccc47dc86165b80397aa23518c.bindPopup(popup_b52265588b704855396be5260c56e6d8)
+        ;
+
+        
+    
+    
+            var marker_d40f2ecec40bd5b2741e2bdecda3704a = L.marker(
+                [51.2414631, 7.1102631],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_ca74ff495d8a19f55efbaaaa17aafede = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_2b85453bb9bf7839ef4a2af303b49f62 = $(`<div id="html_2b85453bb9bf7839ef4a2af303b49f62" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Selmaweg 2</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2414631,7.1102631" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_ca74ff495d8a19f55efbaaaa17aafede.setContent(html_2b85453bb9bf7839ef4a2af303b49f62);
+            
+        
+
+        marker_d40f2ecec40bd5b2741e2bdecda3704a.bindPopup(popup_ca74ff495d8a19f55efbaaaa17aafede)
+        ;
+
+        
+    
+    
+            var marker_56b0d50cd81c24f01c6f909bf86f516a = L.marker(
+                [51.2418622, 7.1112183],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_845c76505027c016ab81b8b92cb36ef7 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_6e4e80667ee621a3eec33587c28f6acf = $(`<div id="html_6e4e80667ee621a3eec33587c28f6acf" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Selmaweg 3</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2418622,7.1112183" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_845c76505027c016ab81b8b92cb36ef7.setContent(html_6e4e80667ee621a3eec33587c28f6acf);
+            
+        
+
+        marker_56b0d50cd81c24f01c6f909bf86f516a.bindPopup(popup_845c76505027c016ab81b8b92cb36ef7)
+        ;
+
+        
+    
+    
+            var marker_c76d347ad08e6aeca633d775da7f3b14 = L.marker(
+                [51.2418001, 7.1115139],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_fc6cfa719ea5ca84e5bd17aebd2b5665 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_199c205ae3553cf2a2ce6572d24a4311 = $(`<div id="html_199c205ae3553cf2a2ce6572d24a4311" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Selmaweg 5</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2418001,7.1115139" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_fc6cfa719ea5ca84e5bd17aebd2b5665.setContent(html_199c205ae3553cf2a2ce6572d24a4311);
+            
+        
+
+        marker_c76d347ad08e6aeca633d775da7f3b14.bindPopup(popup_fc6cfa719ea5ca84e5bd17aebd2b5665)
+        ;
+
+        
+    
+    
+            var marker_e004972acff789e06f003b414bc8c1e6 = L.marker(
+                [51.241817, 7.1119204],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_2936f0d6254edf67efe5649ad89cda42 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_244500c8c7d0ecd618933686ddc7e1df = $(`<div id="html_244500c8c7d0ecd618933686ddc7e1df" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Selmaweg 9</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.241817,7.1119204" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_2936f0d6254edf67efe5649ad89cda42.setContent(html_244500c8c7d0ecd618933686ddc7e1df);
+            
+        
+
+        marker_e004972acff789e06f003b414bc8c1e6.bindPopup(popup_2936f0d6254edf67efe5649ad89cda42)
+        ;
+
+        
+    
+    
+            var marker_8869c77176a21548e1c154aa01dc46dc = L.marker(
+                [51.2414642, 7.1127009],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_1eade95c78240b0c32908761f510cbdd = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_19493eb18c7789988b60a52799df8782 = $(`<div id="html_19493eb18c7789988b60a52799df8782" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Selmaweg 14</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2414642,7.1127009" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_1eade95c78240b0c32908761f510cbdd.setContent(html_19493eb18c7789988b60a52799df8782);
+            
+        
+
+        marker_8869c77176a21548e1c154aa01dc46dc.bindPopup(popup_1eade95c78240b0c32908761f510cbdd)
+        ;
+
+        
+    
+    
+            var marker_20e82ffb292dff4477e0bb6e7b6704dd = L.marker(
+                [51.2405225, 7.106328],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_3247cd9cb4b54246ae1b7bb107c38a99 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_e7b6d27a747d204332a4aed3a2042436 = $(`<div id="html_e7b6d27a747d204332a4aed3a2042436" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Boettingerweg 3</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2405225,7.106328" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_3247cd9cb4b54246ae1b7bb107c38a99.setContent(html_e7b6d27a747d204332a4aed3a2042436);
+            
+        
+
+        marker_20e82ffb292dff4477e0bb6e7b6704dd.bindPopup(popup_3247cd9cb4b54246ae1b7bb107c38a99)
+        ;
+
+        
+    
+    
+            var marker_32be4919cafe4e3e1cb0cba013951f38 = L.marker(
+                [51.2395689, 7.1069063],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_dcb258f86eea1bed7cf8e007657bf586 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_b8957369fe62c4b606baca1e11d50b4c = $(`<div id="html_b8957369fe62c4b606baca1e11d50b4c" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Boettingerweg 15</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2395689,7.1069063" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_dcb258f86eea1bed7cf8e007657bf586.setContent(html_b8957369fe62c4b606baca1e11d50b4c);
+            
+        
+
+        marker_32be4919cafe4e3e1cb0cba013951f38.bindPopup(popup_dcb258f86eea1bed7cf8e007657bf586)
+        ;
+
+        
+    
+    
+            var marker_57fb633ec36139612d2e22913f619ff5 = L.marker(
+                [51.2384991, 7.1076991],
+                {
+}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+        
+    
+        var popup_f4a74c51ace716476cc35a89caf262ee = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_f78f7cf458a81acb716133397c7a8d9d = $(`<div id="html_f78f7cf458a81acb716133397c7a8d9d" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Boettingerweg 33</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2384991,7.1076991" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_f4a74c51ace716476cc35a89caf262ee.setContent(html_f78f7cf458a81acb716133397c7a8d9d);
+            
+        
+
+        marker_57fb633ec36139612d2e22913f619ff5.bindPopup(popup_f4a74c51ace716476cc35a89caf262ee)
+        ;
+
+        
+    
+    
+            map_d862a1e772e0d558532e2c4bf3057361.fitBounds(
+                [[51.2461641, 7.1300088], [51.2462077, 7.129335], [51.2457462, 7.1289749], [51.2461477, 7.1291665], [51.2454862, 7.1287697], [51.2458963, 7.1283886], [51.2461641, 7.1300088], [51.2462077, 7.129335], [51.2457462, 7.1289749], [51.2461477, 7.1291665], [51.2454862, 7.1287697], [51.2458963, 7.1283886], [51.2461641, 7.1300088], [51.2462077, 7.129335], [51.2457462, 7.1289749], [51.2461477, 7.1291665], [51.2454862, 7.1287697], [51.2458963, 7.1283886], [51.2418487, 7.1109218], [51.2414631, 7.1102631], [51.2418622, 7.1112183], [51.2418001, 7.1115139], [51.241817, 7.1119204], [51.2414642, 7.1127009], [51.2405225, 7.106328], [51.2395689, 7.1069063], [51.2384991, 7.1076991]],
+                {}
+            );
+        
+    
+            var locate_control_5b79ff49aad2f36157e2ab013526f2d4 = L.control.locate(
+                {}
+            ).addTo(map_d862a1e772e0d558532e2c4bf3057361);
+            
+        
+</script>
+</html>
