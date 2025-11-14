@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_414110542ab7bdc49df4993ed064c3bf {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-locatecontrol/0.66.2/L.Control.Locate.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-locatecontrol/0.66.2/L.Control.Locate.min.css"/>
+</head>
+<body>
+    
+    
+            <div class="folium-map" id="map_414110542ab7bdc49df4993ed064c3bf" ></div>
+        
+
+        <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            try {
+                var MAP = null;
+                MAP = map_414110542ab7bdc49df4993ed064c3bf;
+                if (!MAP) {
+                    MAP = Object.values(window).find(v => v && v._leaflet_id && v instanceof L.Map);
+                }
+                if (!MAP) {
+                    console.error("Map not found");
+                    return;
+                }
+
+                var STREETS = [{"name": "kipdorf", "coords": [[51.2585707, 7.1518568], [51.2585828, 7.1521068], [51.2585944, 7.1523383], [51.2585901, 7.152584], [51.2585395, 7.1512704], [51.2585411, 7.1513633], [51.2585559, 7.1516686], [51.2585707, 7.1518568], [51.257397, 7.1491315], [51.2575038, 7.1492192], [51.2575972, 7.1492919], [51.2576999, 7.1493465], [51.2576999, 7.1493465], [51.2575698, 7.1491116], [51.2574875, 7.1489808], [51.2567551, 7.1481561], [51.256862, 7.1484281], [51.2569448, 7.1485804], [51.257055, 7.148758], [51.2572966, 7.1490231], [51.257397, 7.1491315], [51.2585395, 7.1512704], [51.2584853, 7.1509239], [51.2584479, 7.1507505], [51.258404, 7.1505467], [51.2583357, 7.1502915], [51.2582308, 7.150023], [51.2580814, 7.1497473], [51.2579649, 7.1495906], [51.2578737, 7.1495072], [51.2576999, 7.1493465], [51.2585901, 7.152584], [51.2586225, 7.152756], [51.2586293, 7.1527811], [51.2586488, 7.152849]]}];
+                
+                function haversine_m(a,b) {
+                    var R = 6371000;
+                    var φ1 = a[0]*Math.PI/180, φ2 = b[0]*Math.PI/180;
+                    var dφ = (b[0]-a[0])*Math.PI/180;
+                    var dλ = (b[1]-a[1])*Math.PI/180;
+                    var sa = Math.sin(dφ/2)*Math.sin(dφ/2) + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)*Math.sin(dλ/2);
+                    var c = 2*Math.atan2(Math.sqrt(sa), Math.sqrt(1-sa));
+                    return R*c;
+                }
+
+                function closestPointOnSegment(p, a, b) {
+                    var latScale = Math.cos(p[0]*Math.PI/180);
+                    var ax=a[0], ay=a[1]*latScale;
+                    var bx=b[0], by=b[1]*latScale;
+                    var px=p[0], py=p[1]*latScale;
+                    var vx=bx-ax, vy=by-ay;
+                    var wx=px-ax, wy=py-ay;
+                    var vlen2 = vx*vx + vy*vy;
+                    if (vlen2===0) return a.slice();
+                    var t = (vx*wx + vy*wy) / vlen2;
+                    t = Math.max(0, Math.min(1,t));
+                    var cx=ax+vx*t, cy=ay+vy*t;
+                    return [cx, cy/latScale];
+                }
+
+                function nearestPointOnPolyline(p, coords) {
+                    if (!coords || coords.length===0) return null;
+                    var best=null, bestDist=Infinity;
+                    if (coords.length===1) {
+                        return {point:coords[0], dist:haversine_m(p,coords[0])};
+                    }
+                    for (var i=0;i<coords.length-1;i++) {
+                        var a=coords[i], b=coords[i+1];
+                        var c=closestPointOnSegment(p,a,b);
+                        var d=haversine_m(p,c);
+                        if (d<bestDist) {
+                            bestDist=d;
+                            best={point:c,dist:d};
+                        }
+                    }
+                    return best;
+                }
+                
+
+                function showNearestStreet() {
+                    if (!navigator.geolocation) {
+                        alert("Геолокация не поддерживается");
+                        return;
+                    }
+                    navigator.geolocation.getCurrentPosition(function(pos) {
+                        var user=[pos.coords.latitude,pos.coords.longitude];
+                        var bestStreet=null, bestInfo=null;
+
+                        for (var si=0;si<STREETS.length;si++) {
+                            var st=STREETS[si];
+                            var coords=st.coords||[];
+                            if (!coords.length) continue;                          
+                            var flat=(Array.isArray(coords[0]) && Array.isArray(coords[0][0]))? coords.flat():coords;
+                            var info=nearestPointOnPolyline(user,flat);
+                            if (!info) continue;
+                            if (!bestInfo || info.dist<bestInfo.dist) {
+                                bestInfo=info;
+                                bestStreet={name:st.name, coords:flat};
+                            }
+                        }
+
+                        if (!bestStreet || !bestInfo) {
+                            alert("Не удалось найти ближайшую улицу");
+                            return;
+                        }
+
+                        var nearPt=bestInfo.point;
+                        var meters=Math.round(bestInfo.dist);
+                        var walkMin=Math.max(1, Math.round((meters/1000)/5*60));
+
+                        MAP.flyTo(nearPt,17);
+
+                        if (!window._marks) window._marks=[];
+                        window._marks.forEach(function(l){ try { MAP.removeLayer(l); } catch(e){} });
+                        window._marks=[];
+
+                        setTimeout(function(){
+                            var m=L.marker(nearPt).addTo(MAP);
+                            m.bindPopup("<div style=\"font-size:14px;\">"+
+                            "Ближайшая улица: <b>"+(bestStreet.name||"—")+"</b><br><br>"+
+                            "Расстояние: "+meters+" м<br>"+
+                            "Пешком: примерно "+walkMin+" мин<br><br>"+
+                            "<a href=\"https://www.google.com/maps/search/?api=1&query="+nearPt[0]+","+nearPt[1]+"\" target=\"_blank\""+
+                            " style=\"display:inline-block;padding:8px 14px;background:#4285F4;color:white;border-radius:6px;text-decoration:none;font-                                    weight:600;box-shadow:0 2px 4px rgba(0,0,0,0.2);transition:0.2s;\""+
+                            " onmouseover=\"this.style.background='#2f6ae1'\""+
+                            " onmouseout=\"this.style.background='#4285F4'\""+
+                            ">🔍 Открыть в Google Maps</a>"+
+                            "</div>").openPopup();
+                            window._marks.push(m);
+                        },650);
+
+                        var um=L.circleMarker(user,{radius:6,color:'#333',fillColor:'#fff',weight:2}).addTo(MAP);
+                        um.bindPopup("Вы здесь");
+                        window._marks.push(um);
+
+                    },function(err){ alert("Ошибка геопозиции: "+err.message); },
+                    {enableHighAccuracy:true,timeout:10000,maximumAge:0});
+                }
+
+                // Кнопка "Показать ближайшую улицу"
+                var btn=document.createElement("button");
+                btn.textContent="Показать ближайшую улицу ко мне";
+                btn.style.position="absolute";
+                btn.style.top="10px";
+                btn.style.left="50%";
+                btn.style.transform="translateX(-50%)";
+                btn.style.zIndex=1000;
+                btn.style.padding="8px 12px";
+                btn.style.background="white";
+                btn.style.border="1px solid #888";
+                btn.style.borderRadius="6px";
+                btn.onclick=showNearestStreet;
+                document.body.appendChild(btn);
+
+                // ==== Плавающий рекламный блок ====
+                var ad=document.createElement("div");
+                ad.innerHTML='<div style="font-size:15px;font-weight:bold;">⚡Карта предоставлена телеграм каналом Schwebezeit</div><div style="font-size:13px;">Нажми, перейди и подпишись</div>';
+                ad.style.position='fixed';
+                ad.style.bottom='20px';
+                ad.style.right='20px';
+                ad.style.zIndex='9999';
+                ad.style.background='white';
+                ad.style.borderRadius='12px';
+                ad.style.padding='10px 15px';
+                ad.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)';
+                ad.style.fontFamily='sans-serif';
+                ad.style.cursor='pointer';
+                ad.style.minWidth='200px';
+                ad.onclick=function(){ window.open('https://t.me/schwebezeit','_blank'); };
+                document.body.appendChild(ad);
+                // ================================
+
+            } catch(e) {
+                console.error("MAP init error:",e);
+            }
+        });
+        </script>
+        </body>
+<script>
+    
+    
+            var map_414110542ab7bdc49df4993ed064c3bf = L.map(
+                "map_414110542ab7bdc49df4993ed064c3bf",
+                {
+                    center: [51.2562, 7.1508],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 12,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_f8cd408808910b2d24d961301e7d31d3 = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_f8cd408808910b2d24d961301e7d31d3.addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+            var marker_7346dd46b6a6d1d00d1a4eb8287e39b2 = L.marker(
+                [51.2575377, 7.1495159],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_598dcf6213c555e9b7ed6a828db8e10a = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_d0c9b3a55f46b1dd42849f97e579fb34 = $(`<div id="html_d0c9b3a55f46b1dd42849f97e579fb34" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 18</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2575377,7.1495159" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_598dcf6213c555e9b7ed6a828db8e10a.setContent(html_d0c9b3a55f46b1dd42849f97e579fb34);
+            
+        
+
+        marker_7346dd46b6a6d1d00d1a4eb8287e39b2.bindPopup(popup_598dcf6213c555e9b7ed6a828db8e10a)
+        ;
+
+        
+    
+    
+            var marker_ed9663ac0481dc36fa0ad9f4c3883b4f = L.marker(
+                [51.257618, 7.1496014],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_8179e7765562335fa8b7fe3e17e9be5e = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_6a0aedfdb6674ed3eab62a3fe3289b31 = $(`<div id="html_6a0aedfdb6674ed3eab62a3fe3289b31" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 20</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.257618,7.1496014" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_8179e7765562335fa8b7fe3e17e9be5e.setContent(html_6a0aedfdb6674ed3eab62a3fe3289b31);
+            
+        
+
+        marker_ed9663ac0481dc36fa0ad9f4c3883b4f.bindPopup(popup_8179e7765562335fa8b7fe3e17e9be5e)
+        ;
+
+        
+    
+    
+            var marker_89f289d503fdd8a652561dc8bafbc047 = L.marker(
+                [51.2577251, 7.1496346],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_39e887d96ed4c7bc3709105d6e8d359c = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_b105c4d068e970f2102cf74102825bf5 = $(`<div id="html_b105c4d068e970f2102cf74102825bf5" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 22</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2577251,7.1496346" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_39e887d96ed4c7bc3709105d6e8d359c.setContent(html_b105c4d068e970f2102cf74102825bf5);
+            
+        
+
+        marker_89f289d503fdd8a652561dc8bafbc047.bindPopup(popup_39e887d96ed4c7bc3709105d6e8d359c)
+        ;
+
+        
+    
+    
+            var marker_6dfa8553864fcf44d49e759ec458bf1d = L.marker(
+                [51.2581065, 7.1495329],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_bae6e545ddacb2c5f0894e316b302a6c = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_1e68d009360c5c40bcf20fcff9ba62ad = $(`<div id="html_1e68d009360c5c40bcf20fcff9ba62ad" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 23</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2581065,7.1495329" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_bae6e545ddacb2c5f0894e316b302a6c.setContent(html_1e68d009360c5c40bcf20fcff9ba62ad);
+            
+        
+
+        marker_6dfa8553864fcf44d49e759ec458bf1d.bindPopup(popup_bae6e545ddacb2c5f0894e316b302a6c)
+        ;
+
+        
+    
+    
+            var marker_0f20f709eda8d0c4c8a444ffb4285389 = L.marker(
+                [51.2578069, 7.1496767],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_a4dd18597e9af283415553d8afe2d322 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_8f0c071e0d7e1c41a569b9fec66386bf = $(`<div id="html_8f0c071e0d7e1c41a569b9fec66386bf" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 24</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2578069,7.1496767" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_a4dd18597e9af283415553d8afe2d322.setContent(html_8f0c071e0d7e1c41a569b9fec66386bf);
+            
+        
+
+        marker_0f20f709eda8d0c4c8a444ffb4285389.bindPopup(popup_a4dd18597e9af283415553d8afe2d322)
+        ;
+
+        
+    
+    
+            var marker_7ebe58e8057cef424c9225281503fb1f = L.marker(
+                [51.258253, 7.1494897],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_4ac3190d42ba6cd97441165d28cb2c51 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_2b0d7e7b79cb0db10732efe315a5b962 = $(`<div id="html_2b0d7e7b79cb0db10732efe315a5b962" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 25</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.258253,7.1494897" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_4ac3190d42ba6cd97441165d28cb2c51.setContent(html_2b0d7e7b79cb0db10732efe315a5b962);
+            
+        
+
+        marker_7ebe58e8057cef424c9225281503fb1f.bindPopup(popup_4ac3190d42ba6cd97441165d28cb2c51)
+        ;
+
+        
+    
+    
+            var marker_d8ed101c4324774e167a5b25335b2988 = L.marker(
+                [51.2579185, 7.1499153],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_bd4b39e9abe2f2c9efd6b24b80cc7fdd = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_05fb44c4fa5220e0ca542783990cd78e = $(`<div id="html_05fb44c4fa5220e0ca542783990cd78e" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 26</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2579185,7.1499153" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_bd4b39e9abe2f2c9efd6b24b80cc7fdd.setContent(html_05fb44c4fa5220e0ca542783990cd78e);
+            
+        
+
+        marker_d8ed101c4324774e167a5b25335b2988.bindPopup(popup_bd4b39e9abe2f2c9efd6b24b80cc7fdd)
+        ;
+
+        
+    
+    
+            var marker_f9f593259bb8c0880839e5cf2de1cab4 = L.marker(
+                [51.2579996, 7.1497519],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_44997e58b8662135bf323f345cecab9b = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_ce150e2ea46bed5aa68a41ee392da562 = $(`<div id="html_ce150e2ea46bed5aa68a41ee392da562" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 28</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2579996,7.1497519" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_44997e58b8662135bf323f345cecab9b.setContent(html_ce150e2ea46bed5aa68a41ee392da562);
+            
+        
+
+        marker_f9f593259bb8c0880839e5cf2de1cab4.bindPopup(popup_44997e58b8662135bf323f345cecab9b)
+        ;
+
+        
+    
+    
+            var marker_9c75bf0b89ec5e021b03e26c5e2f1431 = L.marker(
+                [51.2582084, 7.1497203],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_9e9ff24be4c7375b0311d7106356f378 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_d3b23bf1423df045709ba185432fba6a = $(`<div id="html_d3b23bf1423df045709ba185432fba6a" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 29</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2582084,7.1497203" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_9e9ff24be4c7375b0311d7106356f378.setContent(html_d3b23bf1423df045709ba185432fba6a);
+            
+        
+
+        marker_9c75bf0b89ec5e021b03e26c5e2f1431.bindPopup(popup_9e9ff24be4c7375b0311d7106356f378)
+        ;
+
+        
+    
+    
+            var marker_5a64e8d87c7bca8f64d6dfac72657328 = L.marker(
+                [51.25806, 7.1498914],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_b8e175f22ee6af6f2f9c7bfb0fcf1b33 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_0ae0396a800014968cbf21451dbe7a87 = $(`<div id="html_0ae0396a800014968cbf21451dbe7a87" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 30</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.25806,7.1498914" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_b8e175f22ee6af6f2f9c7bfb0fcf1b33.setContent(html_0ae0396a800014968cbf21451dbe7a87);
+            
+        
+
+        marker_5a64e8d87c7bca8f64d6dfac72657328.bindPopup(popup_b8e175f22ee6af6f2f9c7bfb0fcf1b33)
+        ;
+
+        
+    
+    
+            var marker_130e8d21bb90fa0754a2f064deea0cc2 = L.marker(
+                [51.2582982, 7.1497827],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_66c2995f5c192d2bf04164fe9b3713cc = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_0583aaef8b6bf7f4ee1a4fcc35a6c202 = $(`<div id="html_0583aaef8b6bf7f4ee1a4fcc35a6c202" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 31</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2582982,7.1497827" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_66c2995f5c192d2bf04164fe9b3713cc.setContent(html_0583aaef8b6bf7f4ee1a4fcc35a6c202);
+            
+        
+
+        marker_130e8d21bb90fa0754a2f064deea0cc2.bindPopup(popup_66c2995f5c192d2bf04164fe9b3713cc)
+        ;
+
+        
+    
+    
+            var marker_a0fc388b15bed2674dae00a1b85d5662 = L.marker(
+                [51.2580909, 7.1500075],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_555e197c69ea5584d6f169c3fc304659 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_54349b007f25c484c8ea363ea354f3e4 = $(`<div id="html_54349b007f25c484c8ea363ea354f3e4" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 32</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2580909,7.1500075" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_555e197c69ea5584d6f169c3fc304659.setContent(html_54349b007f25c484c8ea363ea354f3e4);
+            
+        
+
+        marker_a0fc388b15bed2674dae00a1b85d5662.bindPopup(popup_555e197c69ea5584d6f169c3fc304659)
+        ;
+
+        
+    
+    
+            var marker_5cf8c6e3c4275c31fb16deb9a0a27166 = L.marker(
+                [51.2583285, 7.1499167],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_5b6d6dbcb8196f038372706fc564c340 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_0bed53b734ca69be4a49df16740ac8b0 = $(`<div id="html_0bed53b734ca69be4a49df16740ac8b0" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 33</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2583285,7.1499167" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_5b6d6dbcb8196f038372706fc564c340.setContent(html_0bed53b734ca69be4a49df16740ac8b0);
+            
+        
+
+        marker_5cf8c6e3c4275c31fb16deb9a0a27166.bindPopup(popup_5b6d6dbcb8196f038372706fc564c340)
+        ;
+
+        
+    
+    
+            var marker_75d6f6ab37d78dd78a4eac575c699b44 = L.marker(
+                [51.2584126, 7.1501032],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_859d3763d8ac86c2c47d16ca16f05e32 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_6f7837457c1d5e50101752918a0aa1df = $(`<div id="html_6f7837457c1d5e50101752918a0aa1df" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 35</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2584126,7.1501032" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_859d3763d8ac86c2c47d16ca16f05e32.setContent(html_6f7837457c1d5e50101752918a0aa1df);
+            
+        
+
+        marker_75d6f6ab37d78dd78a4eac575c699b44.bindPopup(popup_859d3763d8ac86c2c47d16ca16f05e32)
+        ;
+
+        
+    
+    
+            var marker_02e1dff1826710f9c260233e778c28f1 = L.marker(
+                [51.2581207, 7.150271],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_be96131ce660af7e6383c9c4045f823f = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_5fcdc1ec75ecf874277e8039c23d6a7f = $(`<div id="html_5fcdc1ec75ecf874277e8039c23d6a7f" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 36</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2581207,7.150271" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_be96131ce660af7e6383c9c4045f823f.setContent(html_5fcdc1ec75ecf874277e8039c23d6a7f);
+            
+        
+
+        marker_02e1dff1826710f9c260233e778c28f1.bindPopup(popup_be96131ce660af7e6383c9c4045f823f)
+        ;
+
+        
+    
+    
+            var marker_e39218cb92e2b4dd922c30d0fb93bcac = L.marker(
+                [51.2582712, 7.1504702],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_8de590d9b96bb5f161ed8bde952ed35f = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_1029c12b0303537d7142fe18f297bde9 = $(`<div id="html_1029c12b0303537d7142fe18f297bde9" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 38</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2582712,7.1504702" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_8de590d9b96bb5f161ed8bde952ed35f.setContent(html_1029c12b0303537d7142fe18f297bde9);
+            
+        
+
+        marker_e39218cb92e2b4dd922c30d0fb93bcac.bindPopup(popup_8de590d9b96bb5f161ed8bde952ed35f)
+        ;
+
+        
+    
+    
+            var marker_ab697f00a12956460dcd585aca9aaa3f = L.marker(
+                [51.2584961, 7.1503596],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_d6e62b563fb5bfa1caf147261d4bbccb = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_b25f6ff6790f846716771744117fd715 = $(`<div id="html_b25f6ff6790f846716771744117fd715" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 39</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2584961,7.1503596" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_d6e62b563fb5bfa1caf147261d4bbccb.setContent(html_b25f6ff6790f846716771744117fd715);
+            
+        
+
+        marker_ab697f00a12956460dcd585aca9aaa3f.bindPopup(popup_d6e62b563fb5bfa1caf147261d4bbccb)
+        ;
+
+        
+    
+    
+            var marker_b48f0915e3b3fa0d3675937cfa452eb5 = L.marker(
+                [51.2583477, 7.1507487],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_e9e35563c68d769728e7deca17e19fd7 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_b0fa369b75c0ec941262cfb34afe6666 = $(`<div id="html_b0fa369b75c0ec941262cfb34afe6666" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 40</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2583477,7.1507487" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_e9e35563c68d769728e7deca17e19fd7.setContent(html_b0fa369b75c0ec941262cfb34afe6666);
+            
+        
+
+        marker_b48f0915e3b3fa0d3675937cfa452eb5.bindPopup(popup_e9e35563c68d769728e7deca17e19fd7)
+        ;
+
+        
+    
+    
+            var marker_af99c46a8dffdf787f606ce4180dd412 = L.marker(
+                [51.2586501, 7.1513022],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_85fc70fd4ede70341320e4b2a844f360 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_163e32c040b423d58636f5646d25482c = $(`<div id="html_163e32c040b423d58636f5646d25482c" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 43</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2586501,7.1513022" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_85fc70fd4ede70341320e4b2a844f360.setContent(html_163e32c040b423d58636f5646d25482c);
+            
+        
+
+        marker_af99c46a8dffdf787f606ce4180dd412.bindPopup(popup_85fc70fd4ede70341320e4b2a844f360)
+        ;
+
+        
+    
+    
+            var marker_f9d6862ef5ffd59c19bd83f74a65150d = L.marker(
+                [51.2584482, 7.1516991],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_1603de386237bad2c4fab23a473cc70c = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_d5ea621f642a9336caebca78210e97a6 = $(`<div id="html_d5ea621f642a9336caebca78210e97a6" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 52</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2584482,7.1516991" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_1603de386237bad2c4fab23a473cc70c.setContent(html_d5ea621f642a9336caebca78210e97a6);
+            
+        
+
+        marker_f9d6862ef5ffd59c19bd83f74a65150d.bindPopup(popup_1603de386237bad2c4fab23a473cc70c)
+        ;
+
+        
+    
+    
+            var marker_9cc3b3ceb54cf3dd2b832dc3f8351b25 = L.marker(
+                [51.2584603, 7.1521929],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_a87575e470e8509fefb9e1e0c44c5af2 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_2ae3325bcdbd1f33cb2256c007053f08 = $(`<div id="html_2ae3325bcdbd1f33cb2256c007053f08" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 58</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2584603,7.1521929" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_a87575e470e8509fefb9e1e0c44c5af2.setContent(html_2ae3325bcdbd1f33cb2256c007053f08);
+            
+        
+
+        marker_9cc3b3ceb54cf3dd2b832dc3f8351b25.bindPopup(popup_a87575e470e8509fefb9e1e0c44c5af2)
+        ;
+
+        
+    
+    
+            var marker_ebcce8c9c1680f347df518d8964fb96a = L.marker(
+                [51.2584475, 7.1523173],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_cfce8977b7c85b2d6e134edfd33408dd = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_4d0784ddcb7a3f343cd2fdbd9d0fea97 = $(`<div id="html_4d0784ddcb7a3f343cd2fdbd9d0fea97" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 60</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2584475,7.1523173" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_cfce8977b7c85b2d6e134edfd33408dd.setContent(html_4d0784ddcb7a3f343cd2fdbd9d0fea97);
+            
+        
+
+        marker_ebcce8c9c1680f347df518d8964fb96a.bindPopup(popup_cfce8977b7c85b2d6e134edfd33408dd)
+        ;
+
+        
+    
+    
+            var marker_8fd7934cb2ba742f5c79ca3f64d93f11 = L.marker(
+                [51.2584605, 7.1524417],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_f9c5a1dc353aa243029ff7560bd5fc67 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_ab9ee2fd3c27bbd9012f568e9b848ab9 = $(`<div id="html_ab9ee2fd3c27bbd9012f568e9b848ab9" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 62</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2584605,7.1524417" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_f9c5a1dc353aa243029ff7560bd5fc67.setContent(html_ab9ee2fd3c27bbd9012f568e9b848ab9);
+            
+        
+
+        marker_8fd7934cb2ba742f5c79ca3f64d93f11.bindPopup(popup_f9c5a1dc353aa243029ff7560bd5fc67)
+        ;
+
+        
+    
+    
+            var marker_23d2d4f1f878a935570c3e35706d1a06 = L.marker(
+                [51.2584821, 7.152575],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_d194a5394372c1e642f4fddd31d6058d = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_f388b1ce64063032380224ce979d1334 = $(`<div id="html_f388b1ce64063032380224ce979d1334" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 64</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2584821,7.152575" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_d194a5394372c1e642f4fddd31d6058d.setContent(html_f388b1ce64063032380224ce979d1334);
+            
+        
+
+        marker_23d2d4f1f878a935570c3e35706d1a06.bindPopup(popup_d194a5394372c1e642f4fddd31d6058d)
+        ;
+
+        
+    
+    
+            var marker_146452aa0580bea802bfa9884df3a1d9 = L.marker(
+                [51.2584849, 7.1527105],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_a913e3640359d1d4ae8453fe9425cd49 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_a6ad9262d02f7283038b1bc8914ff121 = $(`<div id="html_a6ad9262d02f7283038b1bc8914ff121" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 66</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2584849,7.1527105" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_a913e3640359d1d4ae8453fe9425cd49.setContent(html_a6ad9262d02f7283038b1bc8914ff121);
+            
+        
+
+        marker_146452aa0580bea802bfa9884df3a1d9.bindPopup(popup_a913e3640359d1d4ae8453fe9425cd49)
+        ;
+
+        
+    
+    
+            var marker_a378b6ed7304b9a37123cf4cd1cb0e6c = L.marker(
+                [51.2584793, 7.1528474],
+                {
+}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+        
+    
+        var popup_a4525e7d03d3151a04c8720ec66417a0 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_a460c73dba41d05abd42e8e53a5bc3fa = $(`<div id="html_a460c73dba41d05abd42e8e53a5bc3fa" style="width: 100.0%; height: 100.0%;">             <div style="font-size:14px;">                 <b>Kipdorf 68</b><br><br>                 <a href="https://www.google.com/maps/search/?api=1&query=51.2584793,7.1528474" target="_blank"                    style="                        display:inline-block;                        padding:8px 14px;                        background:#4285F4;                        color:white;                        border-radius:6px;                        text-decoration:none;                        font-weight:600;                        box-shadow:0 2px 4px rgba(0,0,0,0.2);                        transition:0.2s;                    "                    onmouseover="this.style.background='#2f6ae1'"                    onmouseout="this.style.background='#4285F4'"                 >                     🔍 Открыть в Google Maps                 </a>             </div>             </div>`)[0];
+                popup_a4525e7d03d3151a04c8720ec66417a0.setContent(html_a460c73dba41d05abd42e8e53a5bc3fa);
+            
+        
+
+        marker_a378b6ed7304b9a37123cf4cd1cb0e6c.bindPopup(popup_a4525e7d03d3151a04c8720ec66417a0)
+        ;
+
+        
+    
+    
+            map_414110542ab7bdc49df4993ed064c3bf.fitBounds(
+                [[51.2575377, 7.1495159], [51.257618, 7.1496014], [51.2577251, 7.1496346], [51.2581065, 7.1495329], [51.2578069, 7.1496767], [51.258253, 7.1494897], [51.2579185, 7.1499153], [51.2579996, 7.1497519], [51.2582084, 7.1497203], [51.25806, 7.1498914], [51.2582982, 7.1497827], [51.2580909, 7.1500075], [51.2583285, 7.1499167], [51.2584126, 7.1501032], [51.2581207, 7.150271], [51.2582712, 7.1504702], [51.2584961, 7.1503596], [51.2583477, 7.1507487], [51.2586501, 7.1513022], [51.2584482, 7.1516991], [51.2584603, 7.1521929], [51.2584475, 7.1523173], [51.2584605, 7.1524417], [51.2584821, 7.152575], [51.2584849, 7.1527105], [51.2584793, 7.1528474]],
+                {}
+            );
+        
+    
+            var locate_control_cedea840f65dab69c1978c65d9100188 = L.control.locate(
+                {}
+            ).addTo(map_414110542ab7bdc49df4993ed064c3bf);
+            
+        
+</script>
+</html>
