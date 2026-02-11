@@ -1066,7 +1066,8 @@ def create_map_and_push(addresses, city, filename="map.html"):
 async def start_parsing(application: Application):
     bot = application.bot
 
-    target_date = datetime.strptime("17 February 2026", "%d %B %Y")
+    target_date = datetime.strptime("24 February 2026", "%d %B %Y")
+
     month_translation = {
         "January": "Januar",
         "February": "Februar",
