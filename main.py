@@ -23,7 +23,7 @@ import html
 import math
 from geopy.extra.rate_limiter import RateLimiter as GeoRateLimiter
 # ------- Настройки/конфиг -------
-print(os.getcwd())
+#print(os.getcwd())
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
@@ -54,32 +54,104 @@ def haversine_km(a, b):
     return 2 * R * math.asin(math.sqrt(sa))
 
 
-def geocode_addresses(addresses, city=None, pause=1.0):
-    """
-        Геокодирует список адресов. Возвращает словарь {address: (lat,lon)}.
-        - addresses: список строк (можно до 300)
-        - city: добавляется к запросу (например 'Wuppertal')
-        - pause: минимальная задержка между запросами к Nominatim
-        """
-    geolocator = Nominatim(user_agent=USER_AGENT,
-                           timeout=GEOCODE_TIMEOUT)  # type: ignore
-    geocode = GeoRateLimiter(geolocator.geocode, min_delay_seconds=pause)
+def photon_geocode(query):
+    import requests
+    try:
+        url = "https://photon.komoot.io/api/"
+        resp = requests.get(url, params={"q": query, "limit": 1}, timeout=5)
+        js = resp.json()
+        if js.get("features"):
+            geom = js["features"][0]["geometry"]["coordinates"]
+            return geom[1], geom[0]
+    except:
+        return None
+
+
+def geocode_addresses(addresses, city=None, pause=None):
+    import requests
+    geolocator = Nominatim(user_agent=USER_AGENT, timeout=12)
 
     coords = {}
+
+    def nominatim_query(q, delay):
+        """Попытка геокодирования через Nominatim."""
+        geocode = GeoRateLimiter(geolocator.geocode, min_delay_seconds=delay)
+        return geocode(q)
+
+    def photon_geocode(q):
+        """Fallback через Photon"""
+        try:
+            url = f"https://photon.komoot.io/api/?q={q}"
+            r = requests.get(url, timeout=8)
+            js = r.json()
+            if js["features"]:
+                c = js["features"][0]["geometry"]["coordinates"]
+                return (c[1], c[0])
+        except:
+            return None
+        return None
+
+    def opencage_geocode(q):
+        """Ещё один fallback (бесплатный, но лимитирован)"""
+        try:
+            url = "https://api.opencagedata.com/geocode/v1/json"
+            r = requests.get(url,
+                             params={
+                                 "q": q,
+                                 "key": "YOUR_API_KEY",
+                                 "limit": 1
+                             },
+                             timeout=6)
+            js = r.json()
+            if js["results"]:
+                g = js["results"][0]["geometry"]
+                return (g["lat"], g["lng"])
+        except:
+            return None
+        return None
+
     for addr in addresses:
         query = f"{addr}, {city}" if city else addr
-        try:
-            loc = geocode(query)
-            if loc:
-                coords[addr] = (loc.latitude, loc.longitude)
-            else:
-                coords[addr] = None
-        except Exception as e:
-            logger.warning("Geocode failed for '%s': %s", addr, e)
-            coords[addr] = None
 
-        # небольшая случайная пауза для уважения Nominatim
-        time.sleep(random.uniform(0.2, 0.6))
+        # ===========================
+        #      1) Nominatim (5 попыток)
+        # ===========================
+        loc = None
+        for attempt in range(20):
+            try:
+                delay = min(1.5 * (1.5**attempt), 12)
+                loc = nominatim_query(query, delay)
+                if loc:
+                    coords[addr] = (loc.latitude, loc.longitude)
+                    break
+            except Exception as e:
+                logger.warning(f"Nominatim fail ({attempt+1}/5) '{addr}': {e}")
+                time.sleep(1.3 + attempt * 0.5)
+
+        if loc:
+            continue
+
+        # ===========================
+        #      2) fallback → PHOTON
+        # ===========================
+        photon = photon_geocode(query)
+        if photon:
+            coords[addr] = photon
+            continue
+
+        # ===========================
+        #      3) fallback → OpenCage
+        # ===========================
+        oc = opencage_geocode(query)
+        if oc:
+            coords[addr] = oc
+            continue
+
+        # ===========================
+        #      4) fallback → Пусто
+        # ===========================
+        coords[addr] = None
+        logger.error(f"FAILED TO GEOCODE: {addr}")
 
     return coords
 
@@ -184,6 +256,8 @@ def normalize_street_name(name: str) -> str:
     # Удаляем/заменяем нежелательную пунктуацию на пробелы.
     # Здесь корректно экранированы символы квадратных скобок и т.д.
     s = re.sub(r'[-/_,\.\\"\'()\[\]]+', ' ', s)
+
+    s = re.sub(r'str(?:\.|asse)?(?=[\s,]|$)', 'straße', s)
 
     # Убираем лишние пробелы
     s = re.sub(r'\s+', ' ', s).strip()
@@ -447,7 +521,7 @@ async def fetch_and_parse(session, url, data, street, current_month,
         soup = BeautifulSoup(text, 'lxml')
         month_divs = soup.find_all('div', class_='month')
         page_text = soup.get_text(" ", strip=True)
-        is_calendar = any(div.find('td') for div in month_divs)
+        is_calendar = any(div.find('div') for div in month_divs)
         found_addresses = []
 
         # страница с выбором домов
@@ -483,18 +557,27 @@ async def fetch_and_parse(session, url, data, street, current_month,
 
         # если сразу календарь для всей улицы
         elif is_calendar:
+
             for month_div in month_divs:
+
                 header = month_div.find(['h3', 'span'])
+
                 if not header:
                     continue
                 if header.get_text(strip=True) != current_month:
                     continue
-                for td in month_div.find_all(
-                        'td', class_=['', 'holiday', 'exception']):
-                    day_text = ''.join(re.findall(r'\d+', td.get_text()))
-                    if day_text == current_day and td.find("i",
-                                                           title="Sperrmüll"):
-                        # сохраняем целую улицу
+                day_divs = month_div.find_all('div', class_='day')
+
+                for day in day_divs:
+                    span = day.find('span')
+                    if not span:
+                        continue
+                    day_numbers = re.findall(r'\d+', span.get_text())
+                    if not day_numbers:
+                        continue
+                    day_text = day_numbers[0]
+                    if day_text == current_day and day.find("i",
+                                                            title="Sperrmüll"):
                         found_addresses.append(street)
         else:
             # ищем все варианты похожих улиц
@@ -528,13 +611,19 @@ async def fetch_and_parse(session, url, data, street, current_month,
                             continue
                         if header.get_text(strip=True) != current_month:
                             continue
-                        for td in month_div.find_all(
-                                'td', class_=['', 'holiday', 'exception']):
-                            day_text = ''.join(
-                                re.findall(r'\d+', td.get_text()))
-                            if day_text == current_day and td.find(
+                        day_divs = month_div.find_all('div', class_='day')
+                        for day in day_divs:
+                            span = day.find('span')
+                            if not span:
+                                continue
+                            day_numbers = re.findall(r'\d+', span.get_text())
+                            if not day_numbers:
+                                continue
+                            day_text = day_numbers[0]
+                            if day_text == current_day and day.find(
                                     "i", title="Sperrmüll"):
                                 found_addresses.append(street)
+
         cache[key] = found_addresses if found_addresses else None
 
         return cache[key]
@@ -586,15 +675,24 @@ def create_map_and_push(addresses, city, filename="map.html"):
         try:
             q = f"{addr}, {city}" if city else addr
 
-            def is_street_or_house(addr_raw):
+            def is_street_or_house(addr_raw, osm_type=None):
                 if not isinstance(addr_raw, dict):
+                    return False
+                # Типы, которые НЕ являются дорогами для адресов
+                forbidden_osm_types = {
+                    'track', 'path', 'cycleway', 'footway', 'bridleway',
+                    'construction', 'transportation', 'halt', 'locality',
+                    'platform'
+                }
+                if osm_type and osm_type in forbidden_osm_types:
                     return False
                 forbidden_keys = [
                     'waterway', 'stream', 'river', 'canal', 'harbour',
                     'forest', 'allotments', 'leisure', 'garden', 'cemetery',
                     'industrial', 'landuse', 'farm', 'village_green',
                     'nature_reserve', 'peak', 'island', 'islet',
-                    'public_building', 'historic', 'square'
+                    'public_building', 'historic', 'square', 'locality',
+                    'platform'
                 ]
                 # Исключить водные объекты, ручьи и т.п.
                 if any(addr_raw.get(k) for k in forbidden_keys):
@@ -616,17 +714,42 @@ def create_map_and_push(addresses, city, filename="map.html"):
             loc = None
             if locs:
                 for l in locs:
-                    print(f"    raw address: {l.raw.get('address')}")
-                    t = l.raw.get("type")
-                    print(t)
-                    if is_street_or_house(l.raw.get("address", {})):
+                    #print(f"    raw address: {l.raw.get('address')}")
+                    osm_type = l.raw.get("type")
+                    #print(osm_type)
+                    if is_street_or_house(l.raw.get("address", {}), osm_type):
                         loc = l
                         break
             if not loc:
                 continue
             lat, lon = float(loc.latitude), float(loc.longitude)
             geocoded_points.append([lat, lon])
-            folium.Marker([lat, lon], popup=addr).add_to(fmap)
+            google_link = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
+            popup_html = f"""
+            <div style="font-size:14px;">
+                <b>{addr}</b><br><br>
+                <a href="{google_link}" target="_blank"
+                   style="
+                       display:inline-block;
+                       padding:8px 14px;
+                       background:#4285F4;
+                       color:white;
+                       border-radius:6px;
+                       text-decoration:none;
+                       font-weight:600;
+                       box-shadow:0 2px 4px rgba(0,0,0,0.2);
+                       transition:0.2s;
+                   "
+                   onmouseover="this.style.background='#2f6ae1'"
+                   onmouseout="this.style.background='#4285F4'"
+                >
+                    🔍 Открыть в Google Maps
+                </a>
+            </div>
+            """
+            folium.Marker([lat, lon],
+                          popup=folium.Popup(popup_html,
+                                             max_width=300)).add_to(fmap)
 
             street_from_loc = loc.raw.get("address", {}).get("road")
             geocoded_info.append({
@@ -674,6 +797,26 @@ def create_map_and_push(addresses, city, filename="map.html"):
                     geom = el.get("geometry")
                     if not geom:
                         continue
+                    tags = el.get("tags", {})
+                    highway_type = el.get("tags", {}).get("highway")
+                    if highway_type in [
+                            'track', 'path', 'cycleway', 'footway',
+                            'bridleway', 'construction', 'transportation',
+                            'halt', 'locality', 'bus_station', 'bus_stop',
+                            'station', 'platform'
+                    ]:
+                        continue  # пропускаем сегменты тропинок
+                    forbidden_keys = [
+                        'waterway', 'stream', 'river', 'canal', 'harbour',
+                        'forest', 'allotments', 'leisure', 'garden',
+                        'cemetery', 'industrial', 'landuse', 'farm',
+                        'village_green', 'nature_reserve', 'peak', 'island',
+                        'islet', 'public_building', 'historic', 'square',
+                        'locality', 'bus_stop', 'bus_station', 'station',
+                        'platform'
+                    ]
+                    if any(tags.get(k) for k in forbidden_keys):
+                        continue
                     seg = [[float(p["lat"]), float(p["lon"])] for p in geom]
                     if seg:
                         coords_all.extend(seg)
@@ -719,7 +862,9 @@ def create_map_and_push(addresses, city, filename="map.html"):
 
     streets_json = json.dumps(street_geometries,
                               ensure_ascii=False).replace("</", "<\\/")
-
+    #output_file = "streets.json"
+    #with open(output_file, "w", encoding="utf-8") as f:
+    #f.write(streets_json)
     inject_js = f"""
         <script>
         document.addEventListener("DOMContentLoaded", function() {{
@@ -791,6 +936,7 @@ def create_map_and_push(addresses, city, filename="map.html"):
 
                         for (var si=0;si<STREETS.length;si++) {{
                             var st=STREETS[si];
+                            
                             var coords=st.coords||[];
                             if (!coords.length) continue;                          
                             var flat=(Array.isArray(coords[0]) && Array.isArray(coords[0][0]))? coords.flat():coords;
@@ -819,11 +965,16 @@ def create_map_and_push(addresses, city, filename="map.html"):
 
                         setTimeout(function(){{
                             var m=L.marker(nearPt).addTo(MAP);
-                            m.bindPopup(
-                                "Ближайшая улица: <b>"+(bestStreet.name||"—")+"</b><br>"+
-                                "Расстояние: "+meters+" м<br>"+
-                                "Пешком: примерно "+walkMin+" мин"
-                            ).openPopup();
+                            m.bindPopup("<div style=\\"font-size:14px;\\">"+
+                            "Ближайшая улица: <b>"+(bestStreet.name||"—")+"</b><br><br>"+
+                            "Расстояние: "+meters+" м<br>"+
+                            "Пешком: примерно "+walkMin+" мин<br><br>"+
+                            "<a href=\\"https://www.google.com/maps/search/?api=1&query="+nearPt[0]+","+nearPt[1]+"\\" target=\\"_blank\\""+
+                            " style=\\"display:inline-block;padding:8px 14px;background:#4285F4;color:white;border-radius:6px;text-decoration:none;font-                                    weight:600;box-shadow:0 2px 4px rgba(0,0,0,0.2);transition:0.2s;\\""+
+                            " onmouseover=\\"this.style.background='#2f6ae1'\\""+
+                            " onmouseout=\\"this.style.background='#4285F4'\\""+
+                            ">🔍 Открыть в Google Maps</a>"+
+                            "</div>").openPopup();
                             window._marks.push(m);
                         }},650);
 
@@ -915,7 +1066,7 @@ def create_map_and_push(addresses, city, filename="map.html"):
 async def start_parsing(application: Application):
     bot = application.bot
 
-    target_date = datetime.strptime("20 November 2025", "%d %B %Y")
+    target_date = datetime.strptime("17 February 2026", "%d %B %Y")
     month_translation = {
         "January": "Januar",
         "February": "Februar",
@@ -934,7 +1085,7 @@ async def start_parsing(application: Application):
     # read streets
     streets_df = pd.read_excel('2.xlsx', engine='openpyxl')
     streets = streets_df["STRNAME"].str.rstrip('.').to_list()
-    #streets = ["Bachstr"]
+    #streets = ["Holzer str"]
     city = "Wuppertal"
     url = 'https://awg-wuppertal.de/privatkunden/abfallkalender.html'
 
@@ -965,7 +1116,7 @@ async def start_parsing(application: Application):
         }
         semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
 
-        days_ahead = 1
+        days_ahead = 7
         for day_offset in range(days_ahead):
             current_date = target_date + timedelta(days=day_offset)
             current_day = current_date.strftime("%d").lstrip('0')
