@@ -1042,24 +1042,18 @@ def create_map_and_push(addresses, city, filename="map.html"):
     REPO = "routefromhome-collab/sperren-map"
     BRANCH = "main"
     repo_url = f"https://{TOKEN}@github.com/{REPO}.git"
-    subprocess.run(["git", "remote", "set-url", "origin", repo_url])
+
     try:
         subprocess.run(
-            ["git", "config", "--global", "user.email", "bot@example.com"],
-            check=True)
-        subprocess.run(["git", "config", "--global", "user.name", "MapBot"],
-                       check=True)
+            ["git", "config", "--global", "user.email", "bot@example.com"])
+        subprocess.run(["git", "config", "--global", "user.name", "MapBot"])
         subprocess.run(
-            ["git", "pull", "--rebase", "--autostash", "origin", BRANCH],
-            check=True)
-        subprocess.run(["git", "add", filename], check=True)
+            ["git", "pull", "--rebase", "--autostash", repo_url, BRANCH])
+        subprocess.run(["git", "add", filename])
         subprocess.run([
             "git", "commit", "-m", f"Update map {datetime.now().isoformat()}"
-        ],
-                       check=True)
-
-        # Теперь пушим без URL — токен уже в origin
-        subprocess.run(["git", "push", "origin", BRANCH], check=True)
+        ])
+        subprocess.run(["git", "push", repo_url, BRANCH])
     except Exception as e:
         logger.warning("Git push failed: %s", e)
 
