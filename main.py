@@ -1,4 +1,5 @@
 import aiohttp
+import requests
 import asyncio
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, quote
@@ -23,22 +24,24 @@ import html
 import math
 from geopy.extra.rate_limiter import RateLimiter as GeoRateLimiter
 # ------- Настройки/конфиг -------
-#print(os.getcwd())
+# print(os.getcwd())
 
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')  # GitHub PAT (optional)
-CACHE_FILE = 'cache.json'
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")  # GitHub PAT (optional)
+CACHE_FILE = "cache.json"
 
 MAX_CONCURRENT_REQUESTS = 60  # можно поднять/понизить
 RATE_LIMIT_DELAY = 0.01
-PROGRESS_UPDATE_EVERY = 50  # обновлять прогресс в телеге каждые N улиц
+PROGRESS_UPDATE_EVERY = 200  # обновлять прогресс в телеге каждые N улиц
 TELEGRAM_CHUNK_MAX = 4000  # безопасный размер сообщения
 
 GEOCODE_TIMEOUT = 10
 USER_AGENT = "sperren_route_optimizer"
 MAX_POINTS = 300  # безопасный лимит по условию
 GOOGLE_CHUNK = 20  # Google Maps waypoints per link
+PHOTON_TIMEOUT = 8
+OPENCAGE_KEY = " "
 
 
 # --- Вспомогательные функции ---
@@ -49,111 +52,11 @@ def haversine_km(a, b):
     dlat = lat2 - lat1
     dlon = lon2 - lon1
     R = 6371.0088
-    sa = math.sin(
-        dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+    sa = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    )
     return 2 * R * math.asin(math.sqrt(sa))
-
-
-def photon_geocode(query):
-    import requests
-    try:
-        url = "https://photon.komoot.io/api/"
-        resp = requests.get(url, params={"q": query, "limit": 1}, timeout=5)
-        js = resp.json()
-        if js.get("features"):
-            geom = js["features"][0]["geometry"]["coordinates"]
-            return geom[1], geom[0]
-    except:
-        return None
-
-
-def geocode_addresses(addresses, city=None, pause=None):
-    import requests
-    geolocator = Nominatim(user_agent=USER_AGENT, timeout=12)
-
-    coords = {}
-
-    def nominatim_query(q, delay):
-        """Попытка геокодирования через Nominatim."""
-        geocode = GeoRateLimiter(geolocator.geocode, min_delay_seconds=delay)
-        return geocode(q)
-
-    def photon_geocode(q):
-        """Fallback через Photon"""
-        try:
-            url = f"https://photon.komoot.io/api/?q={q}"
-            r = requests.get(url, timeout=8)
-            js = r.json()
-            if js["features"]:
-                c = js["features"][0]["geometry"]["coordinates"]
-                return (c[1], c[0])
-        except:
-            return None
-        return None
-
-    def opencage_geocode(q):
-        """Ещё один fallback (бесплатный, но лимитирован)"""
-        try:
-            url = "https://api.opencagedata.com/geocode/v1/json"
-            r = requests.get(url,
-                             params={
-                                 "q": q,
-                                 "key": "YOUR_API_KEY",
-                                 "limit": 1
-                             },
-                             timeout=6)
-            js = r.json()
-            if js["results"]:
-                g = js["results"][0]["geometry"]
-                return (g["lat"], g["lng"])
-        except:
-            return None
-        return None
-
-    for addr in addresses:
-        query = f"{addr}, {city}" if city else addr
-
-        # ===========================
-        #      1) Nominatim (5 попыток)
-        # ===========================
-        loc = None
-        for attempt in range(20):
-            try:
-                delay = min(1.5 * (1.5**attempt), 12)
-                loc = nominatim_query(query, delay)
-                if loc:
-                    coords[addr] = (loc.latitude, loc.longitude)
-                    break
-            except Exception as e:
-                logger.warning(f"Nominatim fail ({attempt+1}/5) '{addr}': {e}")
-                time.sleep(1.3 + attempt * 0.5)
-
-        if loc:
-            continue
-
-        # ===========================
-        #      2) fallback → PHOTON
-        # ===========================
-        photon = photon_geocode(query)
-        if photon:
-            coords[addr] = photon
-            continue
-
-        # ===========================
-        #      3) fallback → OpenCage
-        # ===========================
-        oc = opencage_geocode(query)
-        if oc:
-            coords[addr] = oc
-            continue
-
-        # ===========================
-        #      4) fallback → Пусто
-        # ===========================
-        coords[addr] = None
-        logger.error(f"FAILED TO GEOCODE: {addr}")
-
-    return coords
 
 
 def build_distance_matrix(coord_list):
@@ -178,7 +81,7 @@ def nearest_neighbor_tsp(dist_mat, start_index=0):
         last = route[-1]
         # выбрать ближайшую не посещённую
         best = None
-        bestd = float('inf')
+        bestd = float("inf")
         for j in range(n):
             if not visited[j] and dist_mat[last][j] < bestd:
                 bestd = dist_mat[last][j]
@@ -206,8 +109,9 @@ def two_opt(route, dist_mat, improvement_threshold=0.0001):
                     continue
                 a, b = route[i - 1], route[i]
                 c, d = route[j - 1], route[j % n]
-                delta = dist_mat[a][c] + dist_mat[b][d] - dist_mat[a][
-                    b] - dist_mat[c][d]
+                delta = (
+                    dist_mat[a][c] + dist_mat[b][d] - dist_mat[a][b] - dist_mat[c][d]
+                )
                 if delta < -improvement_threshold:
                     # invert
                     route[i:j] = reversed(route[i:j])
@@ -234,8 +138,7 @@ logger = logging.getLogger(__name__)
 def get_random_headers():
     return {
         "User-Agent": random.choice(USER_AGENTS),
-        "Accept":
-        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
         "Connection": "keep-alive",
     }
@@ -244,6 +147,7 @@ def get_random_headers():
 def normalize_street_name(name: str) -> str:
     import re
     import unicodedata
+
     s = str(name).strip().lower()
 
     # Нормализуем unicode (удаляет комбинирующие диакритики, но не меняет ß)
@@ -251,16 +155,16 @@ def normalize_street_name(name: str) -> str:
 
     # Заменяем варианты "str", "str.", "strasse", "strasse." на "straße".
     # Используем word-boundaries, чтобы не менять внутри других слов.
-    s = re.sub(r'\bstr(?:\.|asse)?\b', 'straße', s)
+    s = re.sub(r"\bstr(?:\.|asse)?\b", "straße", s)
 
     # Удаляем/заменяем нежелательную пунктуацию на пробелы.
     # Здесь корректно экранированы символы квадратных скобок и т.д.
-    s = re.sub(r'[-/_,\.\\"\'()\[\]]+', ' ', s)
+    s = re.sub(r'[-/_,\.\\"\'()\[\]]+', " ", s)
 
-    s = re.sub(r'str(?:\.|asse)?(?=[\s,]|$)', 'straße', s)
+    s = re.sub(r"str(?:\.|asse)?(?=[\s,]|$)", "straße", s)
 
     # Убираем лишние пробелы
-    s = re.sub(r'\s+', ' ', s).strip()
+    s = re.sub(r"\s+", " ", s).strip()
 
     return s
 
@@ -268,7 +172,7 @@ def normalize_street_name(name: str) -> str:
 def load_cache():
     if os.path.exists(CACHE_FILE):
         try:
-            with open(CACHE_FILE, 'r', encoding='utf-8') as f:
+            with open(CACHE_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return {}
@@ -276,7 +180,7 @@ def load_cache():
 
 
 def save_cache(cache):
-    with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+    with open(CACHE_FILE, "w", encoding="utf-8") as f:
         json.dump(cache, f, ensure_ascii=False, indent=2)
 
 
@@ -284,14 +188,228 @@ def chunk_text(text, max_len=TELEGRAM_CHUNK_MAX):
     chunks = []
     while len(text) > max_len:
         # try split at newline
-        split_at = text.rfind('\n', 0, max_len)
+        split_at = text.rfind("\n", 0, max_len)
         if split_at == -1:
             split_at = max_len
         chunks.append(text[:split_at])
-        text = text[split_at:].lstrip('\n')
+        text = text[split_at:].lstrip("\n")
     if text:
         chunks.append(text)
     return chunks
+
+
+def photon_geocode(query):
+    import requests
+
+    try:
+        url = "https://photon.komoot.io/api/"
+        resp = requests.get(url, params={"q": query, "limit": 1}, timeout=5)
+        js = resp.json()
+        if js.get("features"):
+            geom = js["features"][0]["geometry"]["coordinates"]
+            return geom[1], geom[0]
+    except:
+        return None
+
+
+def geocode_addresses(addresses, city=None, cache_file="geocode_cache.json"):
+    import requests
+    import time
+    import json
+    import random
+    from geopy.geocoders import Nominatim
+    from geopy.exc import GeocoderServiceError, GeocoderTimedOut
+
+    # --- Загрузка кэша ---
+    try:
+        with open(cache_file, "r", encoding="utf-8") as f:
+            cache = json.load(f)
+    except:
+        cache = {}
+
+    # ✅ ВАЖНО: RateLimiter на уровне Nominatim
+    geolocator = Nominatim(user_agent=USER_AGENT, timeout=15)
+
+    coords = {}
+
+    # ═══════════════════════════════════════════════════════════
+    # ФИЛЬТРЫ ДЛЯ ВАЛИДАЦИИ АДРЕСОВ
+    # ═══════════════════════════════════════════════════════════
+    forbidden_osm_types = {
+        "track",
+        "path",
+        "cycleway",
+        "footway",
+        "bridleway",
+        "construction",
+        "transportation",
+        "halt",
+        "locality",
+        "platform",
+        "neighbourhood",
+    }
+
+    forbidden_keys = [
+        "waterway",
+        "stream",
+        "river",
+        "canal",
+        "harbour",
+        "forest",
+        "allotments",
+        "leisure",
+        "garden",
+        "cemetery",
+        "industrial",
+        "landuse",
+        "farm",
+        "village_green",
+        "nature_reserve",
+        "peak",
+        "island",
+        "islet",
+        "public_building",
+        "historic",
+        "square",
+        "locality",
+        "platform",
+    ]
+
+    def is_valid_address(addr_raw, osm_type=None):
+        """Проверяет, является ли адрес валидной улицей/домом"""
+        if not isinstance(addr_raw, dict):
+            return False
+
+        # ❌ Исключаем недопустимые типы
+        if osm_type and osm_type in forbidden_osm_types:
+            return False
+
+        # ❌ Исключаем по недопустимым ключам
+        if any(addr_raw.get(k) for k in forbidden_keys):
+            return False
+
+        # ✅ Принимаем дома с улицами
+        if addr_raw.get("house_number") and any(
+            addr_raw.get(k) for k in ["road", "street"]
+        ):
+            return True
+
+        # ✅ Принимаем сами улицы
+        if any(addr_raw.get(k) for k in ["road", "street", "residential"]):
+            return True
+
+        return False
+
+    def save_cache():
+        with open(cache_file, "w", encoding="utf-8") as f:
+            json.dump(cache, f, ensure_ascii=False, indent=2)
+
+    def nominatim_geocode(query, attempt=0):
+        """Агрессивный backoff при 429 + фильтрация результатов"""
+        if attempt > 8:
+            logger.error(f"Failed after 8 attempts: {query}")
+            return None
+
+        try:
+            # ✅ Запрашиваем детали адреса для фильтрации
+            locs = geolocator.geocode(query, exactly_one=False, addressdetails=True)
+
+            if not locs:
+                return None
+
+            # ✅ ФИЛЬТРУЕМ результаты
+            for loc in locs:
+                osm_type = loc.raw.get("type")
+                address_details = loc.raw.get("address", {})
+
+                if is_valid_address(address_details, osm_type):
+                    return (loc.latitude, loc.longitude)
+
+            # Все результаты отфильтрованы
+            return None
+
+        except GeocoderTimedOut:
+            wait = 10 + attempt * 5
+            logger.warning(
+                f"Timeout on '{query}' → sleep {wait}s (attempt {attempt + 1})"
+            )
+            time.sleep(wait)
+            return nominatim_geocode(query, attempt + 1)
+
+        except GeocoderServiceError as e:
+            if "429" in str(e):
+                # ✅ ЖЕСТКИЙ backoff на 429
+                wait = 30 + attempt * 15  # 30, 45, 60, 75, 90...
+                logger.warning(
+                    f"429 Too Many Requests on '{query}' → sleep {wait}s (attempt {attempt + 1})"
+                )
+                time.sleep(wait)
+                return nominatim_geocode(query, attempt + 1)
+            else:
+                logger.warning(f"Service error: {e}")
+                time.sleep(5)
+                return None
+
+    def photon_geocode_local(query):
+        """Fallback через Photon (менее строгий лимит)"""
+        try:
+            url = "https://photon.komoot.io/api/"
+            resp = requests.get(url, params={"q": query, "limit": 1}, timeout=10)
+            js = resp.json()
+            if js.get("features"):
+                c = js["features"][0]["geometry"]["coordinates"]
+                return (c[1], c[0])
+        except Exception as e:
+            logger.warning(f"Photon error: {e}")
+        return None
+
+    total = len(addresses)
+    logger.info(f"Geocoding {total} addresses with aggressive backoff and filters...")
+
+    for idx, addr in enumerate(addresses, 1):
+        query = f"{addr}, {city}" if city else addr
+
+        # --- КЭШ ПРОВЕРКА ---
+        if query in cache:
+            coords[addr] = cache[query]
+            logger.info(f"[{idx}/{total}] CACHE: {addr}")
+            continue
+
+        logger.info(f"[{idx}/{total}] Geocoding: {addr}")
+
+        # --- 1️⃣ Nominatim (с агрессивным backoff и фильтрацией) ---
+        result = nominatim_geocode(query)
+
+        # --- 2️⃣ Photon fallback ---
+        if not result:
+            logger.warning(f"Nominatim failed, trying Photon: {addr}")
+            result = photon_geocode_local(query)
+
+        if result:
+            coords[addr] = result
+            cache[query] = result
+            logger.info(f"✅ GEOCODED: {addr} → {result}")
+        else:
+            coords[addr] = None
+            cache[query] = None
+            logger.error(f"❌ FAILED: {addr}")
+
+        # --- ОЧЕНЬ БОЛЬШАЯ ПАУЗА между запросами ---
+        # Nominatim требует строгого соблюдения: 1 запрос в секунду
+        pause = 2.0 + random.uniform(0.5, 1.5)  # 2.5-3.5 сек между запросами
+        logger.info(f"Sleeping {pause:.1f}s...")
+        time.sleep(pause)
+
+        # --- Сохраняем кэш каждые 10 адресов ---
+        if idx % 10 == 0:
+            save_cache()
+            logger.info(f"✅ Cache saved after {idx} addresses")
+
+    save_cache()
+    logger.info(
+        f"✅ Geocoding completed: {sum(1 for v in coords.values() if v)} / {total} addresses geocoded"
+    )
+    return coords
 
 
 def group_addresses_by_street(addresses):
@@ -320,53 +438,48 @@ def group_addresses_by_street(addresses):
     return grouped
 
 
-def generate_google_maps_route_links(ordered_addresses,
-                                     city,
-                                     chunk_size=GOOGLE_CHUNK):
+def generate_google_maps_route_links(ordered_addresses, city, chunk_size=GOOGLE_CHUNK):
     """
-        ordered_addresses: list адресов в порядке следования (строки)
-        Возвращает список ссылок Google Maps; каждая содержит <= chunk_size точек.
-        Формат: https://www.google.com/maps/dir/{A}/{B}/{C}/
-        (используем url-encoded адресы)
-        """
+    ordered_addresses: list адресов в порядке следования (строки)
+    Возвращает список ссылок Google Maps; каждая содержит <= chunk_size точек.
+    Формат: https://www.google.com/maps/dir/{A}/{B}/{C}/
+    (используем url-encoded адресы)
+    """
     links = []
-    # Google поддерживает origin/destination/waypoints; проще: использовать /dir/A/B/C/...
     i = 0
     while i < len(ordered_addresses):
-        segment = ordered_addresses[i:i + chunk_size]
+        segment = ordered_addresses[i : i + chunk_size]
         encoded = [quote(f"{s}, {city}") for s in segment]
-        route_url = "https://www.google.com/maps/dir/" + "/".join(
-            encoded) + "/"
+        route_url = "https://www.google.com/maps/dir/" + "/".join(encoded) + "/"
         links.append(route_url)
         i += chunk_size
     return links
 
 
-    # --- Высокоуровневая функция: оптимизировать маршрут ---
-def build_optimal_route(addresses_with_houses,
-                        start_coords=None,
-                        city=None,
-                        geocode_pause=1.0):
+def build_optimal_route(
+    addresses_with_houses, start_coords=None, city=None, geocode_pause=15.0
+):
     """
-        addresses_with_houses: список полных адресов (строк) — те, которые нужно посетить (до 300).
-        start_coords:
-            - если tuple(lat,lon) — маршрут начнётся ИЗ этой точки
-            - если None — маршрут начнётся С ПЕРВОЙ геокодированной точки
-        city: город (например "Wuppertal")
-        geocode_pause: пауза между геокодами
-        """
+    addresses_with_houses: список полных адресов (строк) — те, которые нужно посетить (до 300).
+    start_coords:
+        - если tuple(lat,lon) — маршрут начнётся ИЗ этой точки
+        - если None — маршрут начнётся С ПЕРВОЙ геокодированной точки
+    city: город (например "Wuppertal")
+    geocode_pause: пауза между геокодами
+
+    ВОЗВРАЩАЕТ: (final_addresses, route_links, coords_map)
+    """
 
     if len(addresses_with_houses) == 0:
         return [], [], {}
 
     if len(addresses_with_houses) > MAX_POINTS:
         raise ValueError(
-            f"Too many points: {len(addresses_with_houses)} > {MAX_POINTS}")
+            f"Too many points: {len(addresses_with_houses)} > {MAX_POINTS}"
+        )
 
     # 1) Геокодируем все адреса
-    coords_map = geocode_addresses(addresses_with_houses,
-                                   city=city,
-                                   pause=geocode_pause)
+    coords_map = geocode_addresses(addresses_with_houses, city=city)
 
     # Фильтруем только те, что нашли координаты
     found_items = [a for a in addresses_with_houses if coords_map.get(a)]
@@ -415,27 +528,28 @@ def build_optimal_route(addresses_with_houses,
     route_links = []
     if start_coords:
         # старт — координаты пользователя
-        all_points = [f"{start_coords[0]},{start_coords[1]}"
-                      ] + [f"{a}, {city}" for a in final_addresses]
+        all_points = [f"{start_coords[0]},{start_coords[1]}"] + [
+            f"{a}, {city}" for a in final_addresses
+        ]
         i = 0
         while i < len(all_points):
-            seg = all_points[i:i + GOOGLE_CHUNK]
+            seg = all_points[i : i + GOOGLE_CHUNK]
             encoded = [quote(s) for s in seg]
-            route_links.append("https://www.google.com/maps/dir/" +
-                               "/".join(encoded) + "/")
+            route_links.append(
+                "https://www.google.com/maps/dir/" + "/".join(encoded) + "/"
+            )
             i += GOOGLE_CHUNK
     else:
         # старт — первая адресная точка
-        route_links = generate_google_maps_route_links(final_addresses,
-                                                       city,
-                                                       chunk_size=GOOGLE_CHUNK)
+        route_links = generate_google_maps_route_links(
+            final_addresses, city, chunk_size=GOOGLE_CHUNK
+        )
 
     return final_addresses, route_links, coords_map
 
 
 # ------- Rate limiter и безопасный запрос -------
 class RateLimiter:
-
     def __init__(self, delay):
         self.delay = delay
         self.last_request = 0
@@ -453,13 +567,15 @@ async def safe_request(session, method, url, rate_limiter, **kwargs):
     for attempt in range(retries):
         try:
             await rate_limiter.acquire()
-            headers = kwargs.pop('headers', None) or get_random_headers()
-            async with session.request(method, url, headers=headers,
-                                       **kwargs) as response:
-                if response.status in (429, ) or response.status >= 500:
+            headers = kwargs.pop("headers", None) or get_random_headers()
+            async with session.request(
+                method, url, headers=headers, **kwargs
+            ) as response:
+                if response.status in (429,) or response.status >= 500:
                     wait = min(2**attempt + random.random(), 30)
-                    logger.warning("HTTP %s from %s — wait %.1fs",
-                                   response.status, url, wait)
+                    logger.warning(
+                        "HTTP %s from %s — wait %.1fs", response.status, url, wait
+                    )
                     await asyncio.sleep(wait)
                     continue
                 return await response.text()
@@ -472,7 +588,7 @@ async def safe_request(session, method, url, rate_limiter, **kwargs):
 
 
 # ------- Telegram helper with RetryAfter handling (HTML parse_mode) -------
-async def tg_send(bot, method='send_message', **kwargs):
+async def tg_send(bot, method="send_message", **kwargs):
     """
     Универсальная обёртка: отправляет сообщения, обрабатывает RetryAfter.
     method: 'send_message' or 'send_photo' etc. По умолчанию send_message.
@@ -481,7 +597,7 @@ async def tg_send(bot, method='send_message', **kwargs):
     max_attempts = 6
     for attempt in range(max_attempts):
         try:
-            if method == 'send_message':
+            if method == "send_message":
                 return await bot.send_message(**kwargs)
             else:
                 # можно расширить при необходимости
@@ -491,8 +607,9 @@ async def tg_send(bot, method='send_message', **kwargs):
             logger.warning("Telegram RetryAfter: wait %s s", wait)
             await asyncio.sleep(wait)
         except TelegramError as e:
-            logger.warning("TelegramError: %s (attempt %d/%d)", e, attempt + 1,
-                           max_attempts)
+            logger.warning(
+                "TelegramError: %s (attempt %d/%d)", e, attempt + 1, max_attempts
+            )
             await asyncio.sleep(min(2**attempt, 30))
         except Exception as e:
             logger.exception("Unexpected Telegram exception: %s", e)
@@ -502,26 +619,37 @@ async def tg_send(bot, method='send_message', **kwargs):
 
 
 # ------- Парсер одной улицы -------
-async def fetch_and_parse(session, url, data, street, current_month,
-                          current_day, semaphore, cache, rate_limiter):
+async def fetch_and_parse(
+    session,
+    url,
+    data,
+    street,
+    current_month,
+    current_day,
+    semaphore,
+    cache,
+    rate_limiter,
+):
     async with semaphore:
         key = f"{street}__{current_month}__{current_day}"
         if key in cache:
             return cache[key]
-        text = await safe_request(session,
-                                  "POST",
-                                  url,
-                                  rate_limiter,
-                                  data=data,
-                                  timeout=aiohttp.ClientTimeout(total=25))
+        text = await safe_request(
+            session,
+            "POST",
+            url,
+            rate_limiter,
+            data=data,
+            timeout=aiohttp.ClientTimeout(total=25),
+        )
         if not text:
             cache[key] = None
             return None
 
-        soup = BeautifulSoup(text, 'lxml')
-        month_divs = soup.find_all('div', class_='month')
+        soup = BeautifulSoup(text, "lxml")
+        month_divs = soup.find_all("div", class_="month")
         page_text = soup.get_text(" ", strip=True)
-        is_calendar = any(div.find('div') for div in month_divs)
+        is_calendar = any(div.find("div") for div in month_divs)
         found_addresses = []
 
         # страница с выбором домов
@@ -531,53 +659,51 @@ async def fetch_and_parse(session, url, data, street, current_month,
                 house_number = link.get_text(strip=True)
                 if not house_number:
                     continue
-                full_link = urljoin(url, link.get('href'))
+                full_link = urljoin(url, link.get("href"))
                 house_text = await safe_request(
                     session,
                     "GET",
                     full_link,
                     rate_limiter,
-                    timeout=aiohttp.ClientTimeout(total=15))
+                    timeout=aiohttp.ClientTimeout(total=15),
+                )
                 if not house_text:
                     continue
-                house_soup = BeautifulSoup(house_text, 'lxml')
-                for month_div in house_soup.find_all('div', class_='month'):
-                    header = month_div.find(['h3', 'span'])
+                house_soup = BeautifulSoup(house_text, "lxml")
+                for month_div in house_soup.find_all("div", class_="month"):
+                    header = month_div.find(["h3", "span"])
                     if not header:
                         continue
                     if header.get_text(strip=True) != current_month:
                         continue
                     for td in month_div.find_all(
-                            'td', class_=['', 'holiday', 'exception']):
-                        day_text = ''.join(re.findall(r'\d+', td.get_text()))
-                        if day_text == current_day and td.find(
-                                "i", title="Sperrmüll"):
+                        "td", class_=["", "holiday", "exception"]
+                    ):
+                        day_text = "".join(re.findall(r"\d+", td.get_text()))
+                        if day_text == current_day and td.find("i", title="Sperrmüll"):
                             # сохраняем полный адрес "Street Name house"
                             found_addresses.append(f"{street} {house_number}")
 
         # если сразу календарь для всей улицы
         elif is_calendar:
-
             for month_div in month_divs:
-
-                header = month_div.find(['h3', 'span'])
+                header = month_div.find(["h3", "span"])
 
                 if not header:
                     continue
                 if header.get_text(strip=True) != current_month:
                     continue
-                day_divs = month_div.find_all('div', class_='day')
+                day_divs = month_div.find_all("div", class_="day")
 
                 for day in day_divs:
-                    span = day.find('span')
+                    span = day.find("span")
                     if not span:
                         continue
-                    day_numbers = re.findall(r'\d+', span.get_text())
+                    day_numbers = re.findall(r"\d+", span.get_text())
                     if not day_numbers:
                         continue
                     day_text = day_numbers[0]
-                    if day_text == current_day and day.find("i",
-                                                            title="Sperrmüll"):
+                    if day_text == current_day and day.find("i", title="Sperrmüll"):
                         found_addresses.append(street)
         else:
             # ищем все варианты похожих улиц
@@ -586,9 +712,8 @@ async def fetch_and_parse(session, url, data, street, current_month,
                 street_text = link.get_text(strip=True)
 
                 # сравнение нормализованное, чтобы исключить ошибки регистра и пробелов
-                if normalize_street_name(street_text) == normalize_street_name(
-                        street):
-                    full_link = urljoin(url, link.get('href'))
+                if normalize_street_name(street_text) == normalize_street_name(street):
+                    full_link = urljoin(url, link.get("href"))
 
                     # скачиваем страницу с реальной улицей
                     exact_page = await safe_request(
@@ -596,32 +721,33 @@ async def fetch_and_parse(session, url, data, street, current_month,
                         "GET",
                         full_link,
                         rate_limiter,
-                        timeout=aiohttp.ClientTimeout(total=15))
+                        timeout=aiohttp.ClientTimeout(total=15),
+                    )
 
                     if not exact_page:
                         continue
 
-                    exact_soup = BeautifulSoup(exact_page, 'lxml')
+                    exact_soup = BeautifulSoup(exact_page, "lxml")
 
                     # повторяем стандартный парсинг
-                    for month_div in exact_soup.find_all('div',
-                                                         class_='month'):
-                        header = month_div.find(['h3', 'span'])
+                    for month_div in exact_soup.find_all("div", class_="month"):
+                        header = month_div.find(["h3", "span"])
                         if not header:
                             continue
                         if header.get_text(strip=True) != current_month:
                             continue
-                        day_divs = month_div.find_all('div', class_='day')
+                        day_divs = month_div.find_all("div", class_="day")
                         for day in day_divs:
-                            span = day.find('span')
+                            span = day.find("span")
                             if not span:
                                 continue
-                            day_numbers = re.findall(r'\d+', span.get_text())
+                            day_numbers = re.findall(r"\d+", span.get_text())
                             if not day_numbers:
                                 continue
                             day_text = day_numbers[0]
                             if day_text == current_day and day.find(
-                                    "i", title="Sperrmüll"):
+                                "i", title="Sperrmüll"
+                            ):
                                 found_addresses.append(street)
 
         cache[key] = found_addresses if found_addresses else None
@@ -636,13 +762,12 @@ def _haversine_m(a, b):
     φ2 = math.radians(b[0])
     dφ = math.radians(b[0] - a[0])
     dλ = math.radians(b[1] - a[1])
-    sa = math.sin(
-        dφ / 2)**2 + math.cos(φ1) * math.cos(φ2) * math.sin(dλ / 2)**2
+    sa = math.sin(dφ / 2) ** 2 + math.cos(φ1) * math.cos(φ2) * math.sin(dλ / 2) ** 2
     c = 2 * math.atan2(math.sqrt(sa), math.sqrt(1 - sa))
     return R * c
 
 
-def create_map_and_push(addresses, city, filename="map.html"):
+def create_map_and_push(addresses, city, filename="map.html", geocoded_coords=None):
     import os, json, logging, subprocess, requests, folium, re
     from datetime import datetime
     from geopy.geocoders import Nominatim
@@ -652,9 +777,6 @@ def create_map_and_push(addresses, city, filename="map.html"):
     logger = logging.getLogger("MAP")
     logger.setLevel(logging.INFO)
 
-    geolocator = Nominatim(user_agent="sperren_map_streets")
-    geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
-
     fmap = folium.Map(location=[51.2562, 7.1508], zoom_start=12)
 
     geocoded_points = []
@@ -662,126 +784,192 @@ def create_map_and_push(addresses, city, filename="map.html"):
     street_names_from_addresses = set()
     street_geometries = []
 
-    for addr in addresses:
-        if not isinstance(addr, str):
-            continue
-        m = re.match(r"^(.*\D)\s+(\d[\dA-Za-z/-]*)\s*$", addr.strip())
-        street = normalize_street_name(
-            m.group(1).strip() if m else addr.strip())
-        if street:
-            street_names_from_addresses.add(street)
+    # ═══════════════════════════════════════════════════════════
+    # 1️⃣ ИСПОЛЬЗУЕМ ПЕРЕДАННЫЕ КООРДИНАТЫ (если есть)
+    # ═══════════════════════════════════════════════════════════
+    if geocoded_coords:
+        for addr in addresses:
+            if addr in geocoded_coords and geocoded_coords[addr]:
+                lat, lon = geocoded_coords[addr]
+                geocoded_points.append([lat, lon])
 
-    for addr in addresses:
-        try:
-            q = f"{addr}, {city}" if city else addr
+                google_link = (
+                    f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
+                )
+                popup_html = f"""
+                <div style="font-size:14px;">
+                    <b>{html.escape(addr)}</b><br><br>
+                    <a href="{google_link}" target="_blank"
+                       style="
+                           display:inline-block;
+                           padding:8px 14px;
+                           background:#4285F4;
+                           color:white;
+                           border-radius:6px;
+                           text-decoration:none;
+                           font-weight:600;
+                           box-shadow:0 2px 4px rgba(0,0,0,0.2);
+                           transition:0.2s;
+                       "
+                       onmouseover="this.style.background='#2f6ae1'"
+                       onmouseout="this.style.background='#4285F4'"
+                    >
+                        🔍 Открыть в Google Maps
+                    </a>
+                </div>
+                """
+                folium.Marker(
+                    [lat, lon], popup=folium.Popup(popup_html, max_width=300)
+                ).add_to(fmap)
 
-            def is_street_or_house(addr_raw, osm_type=None):
-                if not isinstance(addr_raw, dict):
+                geocoded_info.append({"address": addr, "lat": lat, "lon": lon})
+
+                # Извлекаем имя улицы из адреса
+                m = re.match(r"^(.*\D)\s+(\d[\dA-Za-z/-]*)\s*$", addr.strip())
+                street = normalize_street_name(
+                    m.group(1).strip() if m else addr.strip()
+                )
+                if street:
+                    street_names_from_addresses.add(street)
+
+    # ═══════════════════════════════════════════════════════════
+    # 2️⃣ FALLBACK: если координат не было (редкий случай)
+    # ═══════════════════════════════════════════════════════════
+    else:
+        geolocator = Nominatim(user_agent="sperren_map_streets")
+        geocode = RateLimiter(geolocator.geocode, min_delay_seconds=5)
+
+        for addr in addresses:
+            try:
+                q = f"{addr}, {city}" if city else addr
+
+                def is_street_or_house(addr_raw, osm_type=None):
+                    if not isinstance(addr_raw, dict):
+                        return False
+                    forbidden_osm_types = {
+                        "track",
+                        "path",
+                        "cycleway",
+                        "footway",
+                        "bridleway",
+                        "construction",
+                        "transportation",
+                        "halt",
+                        "locality",
+                        "platform",
+                        "neighbourhood",
+                    }
+                    if osm_type and osm_type in forbidden_osm_types:
+                        return False
+                    forbidden_keys = [
+                        "waterway",
+                        "stream",
+                        "river",
+                        "canal",
+                        "harbour",
+                        "forest",
+                        "allotments",
+                        "leisure",
+                        "garden",
+                        "cemetery",
+                        "industrial",
+                        "landuse",
+                        "farm",
+                        "village_green",
+                        "nature_reserve",
+                        "peak",
+                        "island",
+                        "islet",
+                        "public_building",
+                        "historic",
+                        "square",
+                        "locality",
+                        "platform",
+                    ]
+                    if any(addr_raw.get(k) for k in forbidden_keys):
+                        return False
+
+                    if addr_raw.get("house_number") and any(
+                        addr_raw.get(k) for k in ["road", "street"]
+                    ):
+                        return True
+                    if any(addr_raw.get(k) for k in ["road", "street", "residential"]):
+                        return True
                     return False
-                # Типы, которые НЕ являются дорогами для адресов
-                forbidden_osm_types = {
-                    'track', 'path', 'cycleway', 'footway', 'bridleway',
-                    'construction', 'transportation', 'halt', 'locality',
-                    'platform'
-                }
-                if osm_type and osm_type in forbidden_osm_types:
-                    return False
-                forbidden_keys = [
-                    'waterway', 'stream', 'river', 'canal', 'harbour',
-                    'forest', 'allotments', 'leisure', 'garden', 'cemetery',
-                    'industrial', 'landuse', 'farm', 'village_green',
-                    'nature_reserve', 'peak', 'island', 'islet',
-                    'public_building', 'historic', 'square', 'locality',
-                    'platform'
-                ]
-                # Исключить водные объекты, ручьи и т.п.
-                if any(addr_raw.get(k) for k in forbidden_keys):
-                    return False
 
-                if addr_raw.get('house_number') and any(
-                        addr_raw.get(k) for k in ['road', 'street']):
-                    return True
-                if any(
-                        addr_raw.get(k)
-                        for k in ['road', 'street', 'residential']):
-                    return True
-                return False
+                locs = geolocator.geocode(q, exactly_one=False, addressdetails=True)
+                loc = None
+                if locs:
+                    for l in locs:
+                        # print(l.raw)
+                        osm_type = l.raw.get("type")
+                        if is_street_or_house(l.raw.get("address", {}), osm_type):
+                            loc = l
+                            break
+                if not loc:
+                    continue
+                lat, lon = float(loc.latitude), float(loc.longitude)
+                geocoded_points.append([lat, lon])
+                google_link = (
+                    f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
+                )
+                popup_html = f"""
+                <div style="font-size:14px;">
+                    <b>{html.escape(addr)}</b><br><br>
+                    <a href="{google_link}" target="_blank"
+                       style="
+                           display:inline-block;
+                           padding:8px 14px;
+                           background:#4285F4;
+                           color:white;
+                           border-radius:6px;
+                           text-decoration:none;
+                           font-weight:600;
+                           box-shadow:0 2px 4px rgba(0,0,0,0.2);
+                           transition:0.2s;
+                       "
+                       onmouseover="this.style.background='#2f6ae1'"
+                       onmouseout="this.style.background='#4285F4'"
+                    >
+                        🔍 Открыть в Google Maps
+                    </a>
+                </div>
+                """
+                folium.Marker(
+                    [lat, lon], popup=folium.Popup(popup_html, max_width=300)
+                ).add_to(fmap)
 
-            locs = geolocator.geocode(q,
-                                      exactly_one=False,
-                                      addressdetails=True)
-            #print(f"Адрес: {addr}")
-            loc = None
-            if locs:
-                for l in locs:
-                    #print(f"    raw address: {l.raw.get('address')}")
-                    osm_type = l.raw.get("type")
-                    #print(osm_type)
-                    if is_street_or_house(l.raw.get("address", {}), osm_type):
-                        loc = l
-                        break
-            if not loc:
+                street_from_loc = loc.raw.get("address", {}).get("road")
+                geocoded_info.append(
+                    {"address": addr, "lat": lat, "lon": lon, "street": street_from_loc}
+                )
+                if street_from_loc:
+                    street_names_from_addresses.add(street_from_loc)
+            except:
                 continue
-            lat, lon = float(loc.latitude), float(loc.longitude)
-            geocoded_points.append([lat, lon])
-            google_link = f"https://www.google.com/maps/search/?api=1&query={lat},{lon}"
-            popup_html = f"""
-            <div style="font-size:14px;">
-                <b>{addr}</b><br><br>
-                <a href="{google_link}" target="_blank"
-                   style="
-                       display:inline-block;
-                       padding:8px 14px;
-                       background:#4285F4;
-                       color:white;
-                       border-radius:6px;
-                       text-decoration:none;
-                       font-weight:600;
-                       box-shadow:0 2px 4px rgba(0,0,0,0.2);
-                       transition:0.2s;
-                   "
-                   onmouseover="this.style.background='#2f6ae1'"
-                   onmouseout="this.style.background='#4285F4'"
-                >
-                    🔍 Открыть в Google Maps
-                </a>
-            </div>
-            """
-            folium.Marker([lat, lon],
-                          popup=folium.Popup(popup_html,
-                                             max_width=300)).add_to(fmap)
-
-            street_from_loc = loc.raw.get("address", {}).get("road")
-            geocoded_info.append({
-                "address": addr,
-                "lat": lat,
-                "lon": lon,
-                "street": street_from_loc
-            })
-            if street_from_loc:
-                street_names_from_addresses.add(street_from_loc)
-        except:
-            continue
 
     if geocoded_points:
         fmap.fit_bounds(geocoded_points)
 
+    # ═══════════════════════════════════════════════════════════
+    # REST остаётся как было (overpass queries и т.д.)
+    # ═══════════════════════════════════════════════════════════
     def overpass_query_for_street(name, city_name, timeout=25):
-
         q = f"""
                     [out:json][timeout:{timeout}];
                     area["name"="{city_name}"]->.a;
                     (
                         way["name"="{name}"]["highway"](area.a);
                         relation["name"="{name}"]["highway"](area.a);
-
                     );
                     out geom;
                     """
         try:
-            r = requests.post("https://overpass-api.de/api/interpreter",
-                              data=q.encode("utf-8"),
-                              timeout=timeout)
+            r = requests.post(
+                "https://overpass-api.de/api/interpreter",
+                data=q.encode("utf-8"),
+                timeout=timeout,
+            )
             if r.status_code == 200:
                 return r.json()
         except:
@@ -800,20 +988,49 @@ def create_map_and_push(addresses, city, filename="map.html"):
                     tags = el.get("tags", {})
                     highway_type = el.get("tags", {}).get("highway")
                     if highway_type in [
-                            'track', 'path', 'cycleway', 'footway',
-                            'bridleway', 'construction', 'transportation',
-                            'halt', 'locality', 'bus_station', 'bus_stop',
-                            'station', 'platform'
+                        "track",
+                        "path",
+                        "cycleway",
+                        "footway",
+                        "bridleway",
+                        "construction",
+                        "transportation",
+                        "halt",
+                        "locality",
+                        "bus_station",
+                        "bus_stop",
+                        "station",
+                        "platform",
+                        "neighbourhood",
                     ]:
-                        continue  # пропускаем сегменты тропинок
+                        continue
                     forbidden_keys = [
-                        'waterway', 'stream', 'river', 'canal', 'harbour',
-                        'forest', 'allotments', 'leisure', 'garden',
-                        'cemetery', 'industrial', 'landuse', 'farm',
-                        'village_green', 'nature_reserve', 'peak', 'island',
-                        'islet', 'public_building', 'historic', 'square',
-                        'locality', 'bus_stop', 'bus_station', 'station',
-                        'platform'
+                        "waterway",
+                        "stream",
+                        "river",
+                        "canal",
+                        "harbour",
+                        "forest",
+                        "allotments",
+                        "leisure",
+                        "garden",
+                        "cemetery",
+                        "industrial",
+                        "landuse",
+                        "farm",
+                        "village_green",
+                        "nature_reserve",
+                        "peak",
+                        "island",
+                        "islet",
+                        "public_building",
+                        "historic",
+                        "square",
+                        "locality",
+                        "bus_stop",
+                        "bus_station",
+                        "station",
+                        "platform",
                     ]
                     if any(tags.get(k) for k in forbidden_keys):
                         continue
@@ -824,10 +1041,9 @@ def create_map_and_push(addresses, city, filename="map.html"):
                 if len(coords_all) > 2000:
                     step = max(1, len(coords_all) // 2000)
                     coords_all = coords_all[::step]
-                street_geometries.append({
-                    "name": normalize_street_name(street),
-                    "coords": coords_all
-                })
+                street_geometries.append(
+                    {"name": normalize_street_name(street), "coords": coords_all}
+                )
         except:
             continue
 
@@ -838,10 +1054,7 @@ def create_map_and_push(addresses, city, filename="map.html"):
             if not nm or nm in names_seen:
                 continue
             names_seen.add(nm)
-            street_geometries.append({
-                "name": nm,
-                "coords": [[gi["lat"], gi["lon"]]]
-            })
+            street_geometries.append({"name": nm, "coords": [[gi["lat"], gi["lon"]]]})
 
         if not street_geometries and geocoded_points:
             for i, p in enumerate(geocoded_points):
@@ -854,17 +1067,16 @@ def create_map_and_push(addresses, city, filename="map.html"):
 
     fmap.save(filename)
 
+    # Rest of the function remains the same...
     with open(filename, "r", encoding="utf-8") as fh:
         html_text = fh.read()
 
     found = re.findall(r"var (\w+) = L\.map", html_text)
     map_var = found[0] if found else None
 
-    streets_json = json.dumps(street_geometries,
-                              ensure_ascii=False).replace("</", "<\\/")
-    #output_file = "streets.json"
-    #with open(output_file, "w", encoding="utf-8") as f:
-    #f.write(streets_json)
+    streets_json = json.dumps(street_geometries, ensure_ascii=False).replace(
+        "</", "<\\/"
+    )
     inject_js = f"""
         <script>
         document.addEventListener("DOMContentLoaded", function() {{
@@ -880,7 +1092,7 @@ def create_map_and_push(addresses, city, filename="map.html"):
                 }}
 
                 var STREETS = {streets_json};
-                
+
                 function haversine_m(a,b) {{
                     var R = 6371000;
                     var φ1 = a[0]*Math.PI/180, φ2 = b[0]*Math.PI/180;
@@ -923,7 +1135,6 @@ def create_map_and_push(addresses, city, filename="map.html"):
                     }}
                     return best;
                 }}
-                
 
                 function showNearestStreet() {{
                     if (!navigator.geolocation) {{
@@ -936,7 +1147,6 @@ def create_map_and_push(addresses, city, filename="map.html"):
 
                         for (var si=0;si<STREETS.length;si++) {{
                             var st=STREETS[si];
-                            
                             var coords=st.coords||[];
                             if (!coords.length) continue;                          
                             var flat=(Array.isArray(coords[0]) && Array.isArray(coords[0][0]))? coords.flat():coords;
@@ -970,7 +1180,7 @@ def create_map_and_push(addresses, city, filename="map.html"):
                             "Расстояние: "+meters+" м<br>"+
                             "Пешком: примерно "+walkMin+" мин<br><br>"+
                             "<a href=\\"https://www.google.com/maps/search/?api=1&query="+nearPt[0]+","+nearPt[1]+"\\" target=\\"_blank\\""+
-                            " style=\\"display:inline-block;padding:8px 14px;background:#4285F4;color:white;border-radius:6px;text-decoration:none;font-                                    weight:600;box-shadow:0 2px 4px rgba(0,0,0,0.2);transition:0.2s;\\""+
+                            " style=\\"display:inline-block;padding:8px 14px;background:#4285F4;color:white;border-radius:6px;text-decoration:none;font-weight:600;box-shadow:0 2px 4px rgba(0,0,0,0.2);transition:0.2s;\\""+
                             " onmouseover=\\"this.style.background='#2f6ae1'\\""+
                             " onmouseout=\\"this.style.background='#4285F4'\\""+
                             ">🔍 Открыть в Google Maps</a>"+
@@ -986,7 +1196,6 @@ def create_map_and_push(addresses, city, filename="map.html"):
                     {{enableHighAccuracy:true,timeout:10000,maximumAge:0}});
                 }}
 
-                // Кнопка "Показать ближайшую улицу"
                 var btn=document.createElement("button");
                 btn.textContent="Показать ближайшую улицу ко мне";
                 btn.style.position="absolute";
@@ -1001,7 +1210,6 @@ def create_map_and_push(addresses, city, filename="map.html"):
                 btn.onclick=showNearestStreet;
                 document.body.appendChild(btn);
 
-                // ==== Плавающий рекламный блок ====
                 var ad=document.createElement("div");
                 ad.innerHTML='<div style="font-size:15px;font-weight:bold;">⚡Карта предоставлена телеграм каналом Schwebezeit</div><div style="font-size:13px;">Нажми, перейди и подпишись</div>';
                 ad.style.position='fixed';
@@ -1017,7 +1225,6 @@ def create_map_and_push(addresses, city, filename="map.html"):
                 ad.style.minWidth='200px';
                 ad.onclick=function(){{ window.open('https://t.me/schwebezeit','_blank'); }};
                 document.body.appendChild(ad);
-                // ================================
 
             }} catch(e) {{
                 console.error("MAP init error:",e);
@@ -1034,6 +1241,9 @@ def create_map_and_push(addresses, city, filename="map.html"):
     with open(filename, "w", encoding="utf-8") as fh:
         fh.write(html_text)
 
+    # ═══════════════════════════════════════════════════════════
+    # Git push (остаётся как было)
+    # ══════════���════════════════════════════════════════════════
     if not os.getenv("GITHUB_TOKEN"):
         logger.info("NO GITHUB_TOKEN — saved locally: %s", filename)
         return filename
@@ -1044,16 +1254,28 @@ def create_map_and_push(addresses, city, filename="map.html"):
     repo_url = f"https://{TOKEN}@github.com/{REPO}.git"
 
     try:
-        subprocess.run(
-            ["git", "config", "--global", "user.email", "bot@example.com"])
+        subprocess.run(["git", "config", "--global", "user.email", "bot@example.com"])
         subprocess.run(["git", "config", "--global", "user.name", "MapBot"])
-        subprocess.run(
-            ["git", "pull", "--rebase", "--autostash", repo_url, BRANCH])
+
+        # обновляем локальную ветку
+        subprocess.run(["git", "pull", "--rebase", "--autostash", "origin", BRANCH])
+
+        # добавляем файл
         subprocess.run(["git", "add", filename])
-        subprocess.run([
-            "git", "commit", "-m", f"Update map {datetime.now().isoformat()}"
-        ])
-        subprocess.run(["git", "push", repo_url, BRANCH])
+
+        # коммитим
+        subprocess.run(
+            ["git", "commit", "-m", f"Update map {datetime.now().isoformat()}"]
+        )
+
+        # пуш с токеном
+        if TOKEN:
+            repo_url = f"https://{TOKEN}@github.com/{REPO}.git"
+            subprocess.run(["git", "push", repo_url, BRANCH])
+        else:
+            # пуш локальный, если токена нет
+            subprocess.run(["git", "push", "origin", BRANCH])
+
     except Exception as e:
         logger.warning("Git push failed: %s", e)
 
@@ -1066,8 +1288,7 @@ def create_map_and_push(addresses, city, filename="map.html"):
 async def start_parsing(application: Application):
     bot = application.bot
 
-    target_date = datetime.strptime("24 February 2026", "%d %B %Y")
-
+    target_date = datetime.strptime("9 June 2026", "%d %B %Y")
     month_translation = {
         "January": "Januar",
         "February": "Februar",
@@ -1080,81 +1301,92 @@ async def start_parsing(application: Application):
         "September": "September",
         "October": "Oktober",
         "November": "November",
-        "December": "Dezember"
+        "December": "Dezember",
     }
 
     # read streets
-    streets_df = pd.read_excel('2.xlsx', engine='openpyxl')
-    streets = streets_df["STRNAME"].str.rstrip('.').to_list()
-    #streets = ["Holzer str"]
+    streets_df = pd.read_excel("2.xlsx", engine="openpyxl")
+    streets = streets_df["STRNAME"].str.rstrip(".").to_list()
+    # streets = ["Holzer str"]
     city = "Wuppertal"
-    url = 'https://awg-wuppertal.de/privatkunden/abfallkalender.html'
+    url = "https://awg-wuppertal.de/privatkunden/abfallkalender.html"
 
     cache = load_cache()
     rate_limiter = RateLimiter(RATE_LIMIT_DELAY)
     connector = aiohttp.TCPConnector(limit=MAX_CONCURRENT_REQUESTS)
     timeout = aiohttp.ClientTimeout(total=60)
 
-    async with aiohttp.ClientSession(connector=connector,
-                                     timeout=timeout) as session:
+    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
         text = await safe_request(session, "GET", url, rate_limiter)
         if not text:
-            await tg_send(bot,
-                          chat_id=CHAT_ID,
-                          text="❌ Не удалось получить страницу с формой.")
+            await tg_send(
+                bot, chat_id=CHAT_ID, text="❌ Не удалось получить страницу с формой."
+            )
             return
 
-        soup = BeautifulSoup(text, 'lxml')
-        form = soup.find('form', attrs={'name': 'demand'})
+        soup = BeautifulSoup(text, "lxml")
+        form = soup.find("form", attrs={"name": "demand"})
         if not form:
             await tg_send(bot, chat_id=CHAT_ID, text="❌ Форма не найдена.")
             return
 
-        post_url = urljoin(url, form.get('action'))
+        post_url = urljoin(url, form.get("action"))
         data_template = {
-            i.get('name'): i.get('value') or ''
-            for i in form.find_all('input')
+            i.get("name"): i.get("value") or "" for i in form.find_all("input")
         }
         semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
 
         days_ahead = 7
         for day_offset in range(days_ahead):
             current_date = target_date + timedelta(days=day_offset)
-            current_day = current_date.strftime("%d").lstrip('0')
+            current_day = current_date.strftime("%d").lstrip("0")
             current_month = f"{month_translation[current_date.strftime('%B')]} {current_date.strftime('%Y')}"
             previous_date = current_date - timedelta(days=1)
-            previous_day = previous_date.strftime("%d").lstrip('0')
+            previous_day = previous_date.strftime("%d").lstrip("0")
             previous_month = f"{month_translation[previous_date.strftime('%B')]} {previous_date.strftime('%Y')}"
 
             # уведомление старта
             await tg_send(
                 bot,
                 chat_id=CHAT_ID,
-                text=f"🔍 Начало парсинга {previous_day} {previous_month}...")
+                text=f"🔍 Начало парсинга {previous_day} {previous_month}...",
+            )
 
             # подготовка задач
             tasks = []
             for street in streets:
                 dcopy = data_template.copy()
-                dcopy['tx_bwwastecalendar_pi1[demand][streetname]'] = street
+                dcopy["tx_bwwastecalendar_pi1[demand][streetname]"] = street
                 tasks.append(
-                    fetch_and_parse(session, post_url, dcopy, street,
-                                    current_month, current_day, semaphore,
-                                    cache, rate_limiter))
+                    fetch_and_parse(
+                        session,
+                        post_url,
+                        dcopy,
+                        street,
+                        current_month,
+                        current_day,
+                        semaphore,
+                        cache,
+                        rate_limiter,
+                    )
+                )
 
             # прогресс: создаём сообщение
             progress_message = None
             try:
                 progress_message = await bot.send_message(
-                    chat_id=CHAT_ID, text=f"Прогресс: 0/{len(tasks)} улиц...")
+                    chat_id=CHAT_ID, text=f"Прогресс: 0/{len(tasks)} улиц..."
+                )
             except Exception:
                 progress_message = None
 
             results = []
             idx = 0
-            with tqdm(total=len(tasks),
-                      desc=f"Парсинг {previous_day} {previous_month}",
-                      unit="улиц") as pbar:
+            with tqdm(
+                total=len(tasks),
+                desc=f"Парсинг {previous_day} {previous_month}",
+                unit="улиц",
+            ) as pbar:
                 # асинхронно собираем результаты, обновляем прогресс
                 for coro in tqdm_asyncio.as_completed(tasks, total=len(tasks)):
                     res = await coro
@@ -1162,8 +1394,9 @@ async def start_parsing(application: Application):
                     idx += 1
                     pbar.update(1)
                     # обновление telegram прогресса раз в PROGRESS_UPDATE_EVERY
-                    if progress_message and (idx % PROGRESS_UPDATE_EVERY == 0
-                                             or idx == len(tasks)):
+                    if progress_message and (
+                        idx % PROGRESS_UPDATE_EVERY == 0 or idx == len(tasks)
+                    ):
                         try:
                             await progress_message.edit_text(
                                 f"🔍 Парсинг {previous_day} {previous_month}\nПрогресс: {idx}/{len(tasks)} улиц"
@@ -1182,34 +1415,55 @@ async def start_parsing(application: Application):
                     flattened.append(r)
             unique_addresses = list(filter(None, flattened))
 
-            # группируем по улицам (ключи — полные названия улиц)
-            grouped = group_addresses_by_street(unique_addresses)
-            streets_only = sorted(grouped.keys())
+            if unique_addresses:
+                # ═══════════════════════════════════════════════════════════
+                # 1️⃣ ИЗВЛЕКАЕМ ТОЛЬКО НАЗВАНИЯ УЛИЦ (для Telegram + маршруты)
+                # ═══════════════════════════════════════════════════════════
+                streets_only_set = set()
+                for addr in unique_addresses:
+                    # Парсим "Straße 123" → "Straße"
+                    m = re.match(r"^(.*\D)\s+(\d[\dA-Za-z/-]*)\s*$", addr.strip())
+                    street_name = m.group(1).strip() if m else addr.strip()
+                    streets_only_set.add(street_name)
 
-            if streets_only:
-                # Формируем единый текст (HTML)
+                # ✅ СОРТИРУЕМ АЛФАВИТНО И СОХРАНЯЕМ
+                streets_only_alphabetic = sorted(streets_only_set)
+
+                # ═══════════════════════════════════════════════════════════
+                # 2️⃣ ГЕОКОДИРУЕМ И ОПТИМИЗИРУЕМ МАРШРУТ только по улицам
+                # ═══════════════════════════════════════════════════════════
+                final_streets_optimized, route_urls, coords_map_streets = (
+                    build_optimal_route(streets_only_alphabetic, city=city)
+                )
+
+                # ═══════════════════════════════════════════════════════════
+                # 3️⃣ ФОРМИРУЕМ TELEGRAM СООБЩЕНИЕ: ПО АЛФАВИТУ
+                # ═══════════════════════════════════════════════════════════
                 lines = [f"🗑 <b>Шпера {previous_day} {previous_month}:</b>\n"]
-                for street_name in streets_only:
-                    # отображаем полное имя (экранируем HTML)
-                    display = html.escape(street_name)
-                    search_url = f"https://www.google.com/maps/search/?api=1&query={quote(f'{street_name}, {city}')}"
-                    # HTML link: <a href="url">text</a>
+
+                # ✅ Выводим В АЛФАВИТНОМ ПОРЯДКЕ (не оптимизированном)
+                for street in streets_only_alphabetic:
+                    display = html.escape(street)
+                    search_url = f"https://www.google.com/maps/search/?api=1&query={quote(f'{street}, {city}')}"
                     lines.append(f'{display} <a href="{search_url}">map</a>')
 
-                # маршруты по улицам (разбиваем на части по 20 улиц)
-                ordered, route_urls, coords_map = build_optimal_route(
-                    streets_only, city=city)
-
+                # маршруты по ОПТИМИЗИРОВАННЫМ улицам
                 for i, route_url in enumerate(route_urls, start=1):
-                    # вставляем в одну строку с пометкой "map (URL)"
-                    # в HTML: делаем кликабельную ссылку
                     lines.append(
                         f'\n🗺 Маршрут (часть {i}): <a href="{route_url}">map</a>'
                     )
 
-                # создаём карту со всеми адресами (включая дома) и пушим
+                # ═══════════════════════════════════════════════════════════
+                # 4️⃣ СОЗДАЁМ КАРТУ со ВСЕМИ адресами (с домами)
+                # ═══════════════════════════════════════════════════════════
                 filename = f"map_{previous_day}_{previous_month.replace(' ', '_')}.html"
-                gh_url = create_map_and_push(unique_addresses, city, filename)
+
+                # Геокодируем ВСЕ адреса (с домами) для карты
+                coords_map_all = geocode_addresses(unique_addresses, city=city)
+
+                gh_url = create_map_and_push(
+                    unique_addresses, city, filename, geocoded_coords=coords_map_all
+                )
 
                 # добавим ссылку на GH Pages
                 if gh_url:
@@ -1225,19 +1479,21 @@ async def start_parsing(application: Application):
                 chunks = chunk_text(full_text, max_len=TELEGRAM_CHUNK_MAX)
 
                 for chunk in chunks:
-                    await tg_send(bot,
-                                  chat_id=CHAT_ID,
-                                  text=chunk,
-                                  parse_mode="HTML",
-                                  disable_web_page_preview=True)
+                    await tg_send(
+                        bot,
+                        chat_id=CHAT_ID,
+                        text=chunk,
+                        parse_mode="HTML",
+                        disable_web_page_preview=True,
+                    )
                     await asyncio.sleep(0.3)  # небольшая пауза
 
             else:
                 await tg_send(
                     bot,
                     chat_id=CHAT_ID,
-                    text=
-                    f"✅ {previous_day} {previous_month} выходной.\n\n#шпера")
+                    text=f"✅ {previous_day} {previous_month} выходной.\n\n#шпера",
+                )
 
             # сохраняем кэш
             save_cache(cache)
@@ -1252,8 +1508,7 @@ async def main():
     await start_parsing(application)
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     # ✅ Проверяем, есть ли тестовый файл
     if os.path.exists("addresses.json"):
         try:
@@ -1264,9 +1519,7 @@ if __name__ == '__main__':
             addresses = data.get("addresses", [])
 
             if addresses:
-                print(
-                    "📌 Найден addresses.json — создаём карту без запуска парсера..."
-                )
+                print("📌 Найден addresses.json — создаём карту без запуска парсера...")
                 result = create_map_and_push(addresses, city, "debug_map.html")
                 print("✅ Карта создана:", result)
                 sys.exit()  # ✅ выходим, main() НЕ выполняется
