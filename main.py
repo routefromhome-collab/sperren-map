@@ -1288,7 +1288,7 @@ def create_map_and_push(addresses, city, filename="map.html", geocoded_coords=No
 async def start_parsing(application: Application):
     bot = application.bot
 
-    target_date = datetime.strptime("9 June 2026", "%d %B %Y")
+    target_date = datetime.strptime("29 September 2026", "%d %B %Y")
     month_translation = {
         "January": "Januar",
         "February": "Februar",
@@ -1336,7 +1336,7 @@ async def start_parsing(application: Application):
         }
         semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
 
-        days_ahead = 7
+        days_ahead = 6
         for day_offset in range(days_ahead):
             current_date = target_date + timedelta(days=day_offset)
             current_day = current_date.strftime("%d").lstrip("0")
