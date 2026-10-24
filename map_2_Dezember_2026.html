@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_c8265661657a12fde482f8af0bf2a567 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-locatecontrol/0.66.2/L.Control.Locate.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-locatecontrol/0.66.2/L.Control.Locate.min.css"/>
+</head>
+<body>
+    
+    
+            <div class="folium-map" id="map_c8265661657a12fde482f8af0bf2a567" ></div>
+        
+
+        <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            try {
+                var MAP = null;
+                MAP = map_c8265661657a12fde482f8af0bf2a567;
+                if (!MAP) {
+                    MAP = Object.values(window).find(v => v && v._leaflet_id && v instanceof L.Map);
+                }
+                if (!MAP) {
+                    console.error("Map not found");
+                    return;
+                }
+
+                var STREETS = [{"name": "wülfrather straße", "coords": [[51.261795, 7.1333478]]}, {"name": "gertrudenstraße", "coords": [[51.2576879, 7.1382251]]}, {"name": "franzenstraße", "coords": [[51.25954, 7.1387272]]}, {"name": "küferstraße", "coords": [[51.2625082, 7.1360359]]}, {"name": "hombüchel", "coords": [[51.2588118, 7.1391115]]}, {"name": "hedwigstraße", "coords": [[51.2592634, 7.1352578]]}, {"name": "hufschmiedstraße", "coords": [[51.262064, 7.1359116]]}, {"name": "schneiderstraße", "coords": [[51.2583942, 7.1363735]]}, {"name": "wirkerstraße", "coords": [[51.2603782, 7.134969]]}, {"name": "schreinerstraße", "coords": [[51.2609858, 7.1378646]]}, {"name": "am kasinogarten", "coords": [[51.2575435, 7.1393058]]}, {"name": "reitbahnstraße", "coords": [[51.2596271, 7.1423486]]}, {"name": "schusterstraße", "coords": [[51.2570399, 7.1343894]]}, {"name": "reiterstraße", "coords": [[51.2592056, 7.1412215]]}, {"name": "zimmerstraße", "coords": [[51.2587113, 7.1380775]]}, {"name": "ottenbrucher straße", "coords": [[51.2564116, 7.1324858]]}, {"name": "grünewalder berg", "coords": [[51.2567657, 7.1360961]]}, {"name": "rolandstraße", "coords": [[51.2603618, 7.1410725]]}, {"name": "roßstraße", "coords": [[51.2600421, 7.1399205]]}, {"name": "brunnenstraße", "coords": [[51.2608245, 7.1370448]]}, {"name": "sattlerstraße", "coords": [[51.2605739, 7.1363006]]}, {"name": "plateniusstraße", "coords": [[51.2585911, 7.1416355]]}, {"name": "charlottenstraße", "coords": [[51.259614, 7.1344056]]}, {"name": "dorotheenstraße", "coords": [[51.2596468, 7.1338062]]}, {"name": "ekkehardstraße", "coords": [[51.2586797, 7.1401927]]}, {"name": "wielandstraße", "coords": [[51.2604649, 7.1415584]]}];
+
+                function haversine_m(a,b) {
+                    var R = 6371000;
+                    var φ1 = a[0]*Math.PI/180, φ2 = b[0]*Math.PI/180;
+                    var dφ = (b[0]-a[0])*Math.PI/180;
+                    var dλ = (b[1]-a[1])*Math.PI/180;
+                    var sa = Math.sin(dφ/2)*Math.sin(dφ/2) + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)*Math.sin(dλ/2);
+                    var c = 2*Math.atan2(Math.sqrt(sa), Math.sqrt(1-sa));
+                    return R*c;
+                }
+
+                function closestPointOnSegment(p, a, b) {
+                    var latScale = Math.cos(p[0]*Math.PI/180);
+                    var ax=a[0], ay=a[1]*latScale;
+                    var bx=b[0], by=b[1]*latScale;
+                    var px=p[0], py=p[1]*latScale;
+                    var vx=bx-ax, vy=by-ay;
+                    var wx=px-ax, wy=py-ay;
+                    var vlen2 = vx*vx + vy*vy;
+                    if (vlen2===0) return a.slice();
+                    var t = (vx*wx + vy*wy) / vlen2;
+                    t = Math.max(0, Math.min(1,t));
+                    var cx=ax+vx*t, cy=ay+vy*t;
+                    return [cx, cy/latScale];
+                }
+
+                function nearestPointOnPolyline(p, coords) {
+                    if (!coords || coords.length===0) return null;
+                    var best=null, bestDist=Infinity;
+                    if (coords.length===1) {
+                        return {point:coords[0], dist:haversine_m(p,coords[0])};
+                    }
+                    for (var i=0;i<coords.length-1;i++) {
+                        var a=coords[i], b=coords[i+1];
+                        var c=closestPointOnSegment(p,a,b);
+                        var d=haversine_m(p,c);
+                        if (d<bestDist) {
+                            bestDist=d;
+                            best={point:c,dist:d};
+                        }
+                    }
+                    return best;
+                }
+
+                function showNearestStreet() {
+                    if (!navigator.geolocation) {
+                        alert("Геолокация не поддерживается");
+                        return;
+                    }
+                    navigator.geolocation.getCurrentPosition(function(pos) {
+                        var user=[pos.coords.latitude,pos.coords.longitude];
+                        var bestStreet=null, bestInfo=null;
+
+                        for (var si=0;si<STREETS.length;si++) {
+                            var st=STREETS[si];
+                            var coords=st.coords||[];
+                            if (!coords.length) continue;                          
+                            var flat=(Array.isArray(coords[0]) && Array.isArray(coords[0][0]))? coords.flat():coords;
+                            var info=nearestPointOnPolyline(user,flat);
+                            if (!info) continue;
+                            if (!bestInfo || info.dist<bestInfo.dist) {
+                                bestInfo=info;
+                                bestStreet={name:st.name, coords:flat};
+                            }
+                        }
+
+                        if (!bestStreet || !bestInfo) {
+                            alert("Не удалось найти ближайшую улицу");
+                            return;
+                        }
+
+                        var nearPt=bestInfo.point;
+                        var meters=Math.round(bestInfo.dist);
+                        var walkMin=Math.max(1, Math.round((meters/1000)/5*60));
+
+                        MAP.flyTo(nearPt,17);
+
+                        if (!window._marks) window._marks=[];
+                        window._marks.forEach(function(l){ try { MAP.removeLayer(l); } catch(e){} });
+                        window._marks=[];
+
+                        setTimeout(function(){
+                            var m=L.marker(nearPt).addTo(MAP);
+                            m.bindPopup("<div style=\"font-size:14px;\">"+
+                            "Ближайшая улица: <b>"+(bestStreet.name||"—")+"</b><br><br>"+
+                            "Расстояние: "+meters+" м<br>"+
+                            "Пешком: примерно "+walkMin+" мин<br><br>"+
+                            "<a href=\"https://www.google.com/maps/search/?api=1&query="+nearPt[0]+","+nearPt[1]+"\" target=\"_blank\""+
+                            " style=\"display:inline-block;padding:8px 14px;background:#4285F4;color:white;border-radius:6px;text-decoration:none;font-weight:600;box-shadow:0 2px 4px rgba(0,0,0,0.2);transition:0.2s;\""+
+                            " onmouseover=\"this.style.background='#2f6ae1'\""+
+                            " onmouseout=\"this.style.background='#4285F4'\""+
+                            ">🔍 Открыть в Google Maps</a>"+
+                            "</div>").openPopup();
+                            window._marks.push(m);
+                        },650);
+
+                        var um=L.circleMarker(user,{radius:6,color:'#333',fillColor:'#fff',weight:2}).addTo(MAP);
+                        um.bindPopup("Вы здесь");
+                        window._marks.push(um);
+
+                    },function(err){ alert("Ошибка геопозиции: "+err.message); },
+                    {enableHighAccuracy:true,timeout:10000,maximumAge:0});
+                }
+
+                var btn=document.createElement("button");
+                btn.textContent="Показать ближайшую улицу ко мне";
+                btn.style.position="absolute";
+                btn.style.top="10px";
+                btn.style.left="50%";
+                btn.style.transform="translateX(-50%)";
+                btn.style.zIndex=1000;
+                btn.style.padding="8px 12px";
+                btn.style.background="white";
+                btn.style.border="1px solid #888";
+                btn.style.borderRadius="6px";
+                btn.onclick=showNearestStreet;
+                document.body.appendChild(btn);
+
+                var ad=document.createElement("div");
+                ad.innerHTML='<div style="font-size:15px;font-weight:bold;">⚡Карта предоставлена телеграм каналом Schwebezeit</div><div style="font-size:13px;">Нажми, перейди и подпишись</div>';
+                ad.style.position='fixed';
+                ad.style.bottom='20px';
+                ad.style.right='20px';
+                ad.style.zIndex='9999';
+                ad.style.background='white';
+                ad.style.borderRadius='12px';
+                ad.style.padding='10px 15px';
+                ad.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)';
+                ad.style.fontFamily='sans-serif';
+                ad.style.cursor='pointer';
+                ad.style.minWidth='200px';
+                ad.onclick=function(){ window.open('https://t.me/schwebezeit','_blank'); };
+                document.body.appendChild(ad);
+
+            } catch(e) {
+                console.error("MAP init error:",e);
+            }
+        });
+        </script>
+        </body>
+<script>
+    
+    
+            var map_c8265661657a12fde482f8af0bf2a567 = L.map(
+                "map_c8265661657a12fde482f8af0bf2a567",
+                {
+                    center: [51.2562, 7.1508],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 12,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_1b872720d043b8d6f06265ef43914a0c = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_1b872720d043b8d6f06265ef43914a0c.addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+            var marker_395930d7f2a5b625706cde84b2d9a13e = L.marker(
+                [51.261795, 7.1333478],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_0525ebcef4b6d2f9d76880e61d1f8a67 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_f53d15c0a0239be81a7b8d06640fc51b = $(`<div id="html_f53d15c0a0239be81a7b8d06640fc51b" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Wülfrather Str</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.261795,7.1333478" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_0525ebcef4b6d2f9d76880e61d1f8a67.setContent(html_f53d15c0a0239be81a7b8d06640fc51b);
+            
+        
+
+        marker_395930d7f2a5b625706cde84b2d9a13e.bindPopup(popup_0525ebcef4b6d2f9d76880e61d1f8a67)
+        ;
+
+        
+    
+    
+            var marker_e2126befab1e67c0364166722aeaade9 = L.marker(
+                [51.2576879, 7.1382251],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_48d20c6bd11e9447948db9fd8858b6d3 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_f4c4307b09c8b62be3bcbd109d1a70bf = $(`<div id="html_f4c4307b09c8b62be3bcbd109d1a70bf" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Gertrudenstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2576879,7.1382251" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_48d20c6bd11e9447948db9fd8858b6d3.setContent(html_f4c4307b09c8b62be3bcbd109d1a70bf);
+            
+        
+
+        marker_e2126befab1e67c0364166722aeaade9.bindPopup(popup_48d20c6bd11e9447948db9fd8858b6d3)
+        ;
+
+        
+    
+    
+            var marker_4dcd539ef63e51c2df6133c7b93aa287 = L.marker(
+                [51.25954, 7.1387272],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_c457c4d74d4acaa85eb49dac8b9030e1 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_abca7ea57d6a85b637bd8bef850ac811 = $(`<div id="html_abca7ea57d6a85b637bd8bef850ac811" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Franzenstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.25954,7.1387272" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_c457c4d74d4acaa85eb49dac8b9030e1.setContent(html_abca7ea57d6a85b637bd8bef850ac811);
+            
+        
+
+        marker_4dcd539ef63e51c2df6133c7b93aa287.bindPopup(popup_c457c4d74d4acaa85eb49dac8b9030e1)
+        ;
+
+        
+    
+    
+            var marker_a1247f3a60cc19aba0ad2ce431df4467 = L.marker(
+                [51.2625082, 7.1360359],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_2dca9d14d9bb257a7023d7f5a1a548da = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_38affa097250db4341a07347de078e5a = $(`<div id="html_38affa097250db4341a07347de078e5a" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Küferstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2625082,7.1360359" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_2dca9d14d9bb257a7023d7f5a1a548da.setContent(html_38affa097250db4341a07347de078e5a);
+            
+        
+
+        marker_a1247f3a60cc19aba0ad2ce431df4467.bindPopup(popup_2dca9d14d9bb257a7023d7f5a1a548da)
+        ;
+
+        
+    
+    
+            var marker_1a6091eec6e73ce1bd9ec594c205361e = L.marker(
+                [51.2588118, 7.1391115],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_7cb347c1e477b976fa161b35ad4361b6 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_2203b4de53ced8e9f80da3f56cb8e4e9 = $(`<div id="html_2203b4de53ced8e9f80da3f56cb8e4e9" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Hombüchel</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2588118,7.1391115" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_7cb347c1e477b976fa161b35ad4361b6.setContent(html_2203b4de53ced8e9f80da3f56cb8e4e9);
+            
+        
+
+        marker_1a6091eec6e73ce1bd9ec594c205361e.bindPopup(popup_7cb347c1e477b976fa161b35ad4361b6)
+        ;
+
+        
+    
+    
+            var marker_839f57d7b6bbdbfedd079de1e86d2bb6 = L.marker(
+                [51.2592634, 7.1352578],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_dced449f01de31ac8976822c8d14955b = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_a1f6aca1ae44c7d4942488b44233f1f3 = $(`<div id="html_a1f6aca1ae44c7d4942488b44233f1f3" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Hedwigstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2592634,7.1352578" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_dced449f01de31ac8976822c8d14955b.setContent(html_a1f6aca1ae44c7d4942488b44233f1f3);
+            
+        
+
+        marker_839f57d7b6bbdbfedd079de1e86d2bb6.bindPopup(popup_dced449f01de31ac8976822c8d14955b)
+        ;
+
+        
+    
+    
+            var marker_286ec4c0264823ba2d4148efb0a3612c = L.marker(
+                [51.262064, 7.1359116],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_7ffc73224b827cd3e47833c5e844a6d4 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_54c4c29feedd2de3d5f686af082252da = $(`<div id="html_54c4c29feedd2de3d5f686af082252da" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Hufschmiedstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.262064,7.1359116" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_7ffc73224b827cd3e47833c5e844a6d4.setContent(html_54c4c29feedd2de3d5f686af082252da);
+            
+        
+
+        marker_286ec4c0264823ba2d4148efb0a3612c.bindPopup(popup_7ffc73224b827cd3e47833c5e844a6d4)
+        ;
+
+        
+    
+    
+            var marker_0438deb33b9f9fd0138131176d54989f = L.marker(
+                [51.2583942, 7.1363735],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_a0a290775250439936fcb7814e69bc46 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_70d4f80049e1cd4b2891995cb41aa925 = $(`<div id="html_70d4f80049e1cd4b2891995cb41aa925" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Schneiderstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2583942,7.1363735" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_a0a290775250439936fcb7814e69bc46.setContent(html_70d4f80049e1cd4b2891995cb41aa925);
+            
+        
+
+        marker_0438deb33b9f9fd0138131176d54989f.bindPopup(popup_a0a290775250439936fcb7814e69bc46)
+        ;
+
+        
+    
+    
+            var marker_30468b8103585350d9ad8425a029e616 = L.marker(
+                [51.2603782, 7.134969],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_3d0f38c9ffee542a5946ff6aa3f3e260 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_695842ac365285b2469a893e79a3daff = $(`<div id="html_695842ac365285b2469a893e79a3daff" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Wirkerstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2603782,7.134969" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_3d0f38c9ffee542a5946ff6aa3f3e260.setContent(html_695842ac365285b2469a893e79a3daff);
+            
+        
+
+        marker_30468b8103585350d9ad8425a029e616.bindPopup(popup_3d0f38c9ffee542a5946ff6aa3f3e260)
+        ;
+
+        
+    
+    
+            var marker_c60e4baee683653d3ad3d071b7663696 = L.marker(
+                [51.2609858, 7.1378646],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_7a0463411c9f24dad683b938394939b7 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_4470818da7ae167d47a8ad3e0be4e2e2 = $(`<div id="html_4470818da7ae167d47a8ad3e0be4e2e2" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Schreinerstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2609858,7.1378646" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_7a0463411c9f24dad683b938394939b7.setContent(html_4470818da7ae167d47a8ad3e0be4e2e2);
+            
+        
+
+        marker_c60e4baee683653d3ad3d071b7663696.bindPopup(popup_7a0463411c9f24dad683b938394939b7)
+        ;
+
+        
+    
+    
+            var marker_3026c878b9d39326ff20faa1f902a99f = L.marker(
+                [51.2575435, 7.1393058],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_f1023ecc54b61cdaf0020d576fa2e8da = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_7b9eae2af4331f9458d22d255f0100a9 = $(`<div id="html_7b9eae2af4331f9458d22d255f0100a9" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Am Kasinogarten</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2575435,7.1393058" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_f1023ecc54b61cdaf0020d576fa2e8da.setContent(html_7b9eae2af4331f9458d22d255f0100a9);
+            
+        
+
+        marker_3026c878b9d39326ff20faa1f902a99f.bindPopup(popup_f1023ecc54b61cdaf0020d576fa2e8da)
+        ;
+
+        
+    
+    
+            var marker_2696d80932ea7d881daaf345b83f3025 = L.marker(
+                [51.2596271, 7.1423486],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_f4913d443c0c76e320ad99a43a25cc12 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_affd6779b013b8a9d89977f63d9011a3 = $(`<div id="html_affd6779b013b8a9d89977f63d9011a3" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Reitbahnstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2596271,7.1423486" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_f4913d443c0c76e320ad99a43a25cc12.setContent(html_affd6779b013b8a9d89977f63d9011a3);
+            
+        
+
+        marker_2696d80932ea7d881daaf345b83f3025.bindPopup(popup_f4913d443c0c76e320ad99a43a25cc12)
+        ;
+
+        
+    
+    
+            var marker_b457eb08c4f75ca28c11f920faf00d6d = L.marker(
+                [51.2570399, 7.1343894],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_da64f19db9b16cde718b2f690eb16294 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_48958c72a0951d291c64de18bae01967 = $(`<div id="html_48958c72a0951d291c64de18bae01967" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Schusterstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2570399,7.1343894" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_da64f19db9b16cde718b2f690eb16294.setContent(html_48958c72a0951d291c64de18bae01967);
+            
+        
+
+        marker_b457eb08c4f75ca28c11f920faf00d6d.bindPopup(popup_da64f19db9b16cde718b2f690eb16294)
+        ;
+
+        
+    
+    
+            var marker_877eaf8fa5777223b6bc3cbb88fa5e57 = L.marker(
+                [51.2592056, 7.1412215],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_d8e16583ba59681dbc56328299452111 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_75e80c3bace4485f4802f8a60e37b411 = $(`<div id="html_75e80c3bace4485f4802f8a60e37b411" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Reiterstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2592056,7.1412215" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_d8e16583ba59681dbc56328299452111.setContent(html_75e80c3bace4485f4802f8a60e37b411);
+            
+        
+
+        marker_877eaf8fa5777223b6bc3cbb88fa5e57.bindPopup(popup_d8e16583ba59681dbc56328299452111)
+        ;
+
+        
+    
+    
+            var marker_4cb12d7951083b6a62801700e972d93a = L.marker(
+                [51.2587113, 7.1380775],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_be6dc4250b2f12f4ab2f26593df465bd = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_be672d8a8a26dbd92d0520ea45fc5c98 = $(`<div id="html_be672d8a8a26dbd92d0520ea45fc5c98" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Zimmerstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2587113,7.1380775" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_be6dc4250b2f12f4ab2f26593df465bd.setContent(html_be672d8a8a26dbd92d0520ea45fc5c98);
+            
+        
+
+        marker_4cb12d7951083b6a62801700e972d93a.bindPopup(popup_be6dc4250b2f12f4ab2f26593df465bd)
+        ;
+
+        
+    
+    
+            var marker_fe1800185dce00686dbca0f6c45e4d39 = L.marker(
+                [51.2564116, 7.1324858],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_d575d468582fe4cadb309069da136085 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_567d66bc461202fba114f9ad7df84871 = $(`<div id="html_567d66bc461202fba114f9ad7df84871" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Ottenbrucher Str</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2564116,7.1324858" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_d575d468582fe4cadb309069da136085.setContent(html_567d66bc461202fba114f9ad7df84871);
+            
+        
+
+        marker_fe1800185dce00686dbca0f6c45e4d39.bindPopup(popup_d575d468582fe4cadb309069da136085)
+        ;
+
+        
+    
+    
+            var marker_0139acfb84bca2cba334e1b4187eeec8 = L.marker(
+                [51.2567657, 7.1360961],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_3fb3127c3209475341891e0722c5da67 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_869c1f4eda5926a72380636ed51181f3 = $(`<div id="html_869c1f4eda5926a72380636ed51181f3" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Grünewalder Berg</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2567657,7.1360961" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_3fb3127c3209475341891e0722c5da67.setContent(html_869c1f4eda5926a72380636ed51181f3);
+            
+        
+
+        marker_0139acfb84bca2cba334e1b4187eeec8.bindPopup(popup_3fb3127c3209475341891e0722c5da67)
+        ;
+
+        
+    
+    
+            var marker_d04504c1a394098c8a44d9ee127040da = L.marker(
+                [51.2603618, 7.1410725],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_31c6e2111fac95248e6c485bfaddc554 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_d732950321f31c46e79b67f6ac923db3 = $(`<div id="html_d732950321f31c46e79b67f6ac923db3" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Rolandstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2603618,7.1410725" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_31c6e2111fac95248e6c485bfaddc554.setContent(html_d732950321f31c46e79b67f6ac923db3);
+            
+        
+
+        marker_d04504c1a394098c8a44d9ee127040da.bindPopup(popup_31c6e2111fac95248e6c485bfaddc554)
+        ;
+
+        
+    
+    
+            var marker_888f76e85807336c52a13e154a0e8351 = L.marker(
+                [51.2600421, 7.1399205],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_c8730a10b1d2ed55107c8aa6dd1a4c9f = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_e387882e30403645ed7dc8bbe996fd81 = $(`<div id="html_e387882e30403645ed7dc8bbe996fd81" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Roßstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2600421,7.1399205" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_c8730a10b1d2ed55107c8aa6dd1a4c9f.setContent(html_e387882e30403645ed7dc8bbe996fd81);
+            
+        
+
+        marker_888f76e85807336c52a13e154a0e8351.bindPopup(popup_c8730a10b1d2ed55107c8aa6dd1a4c9f)
+        ;
+
+        
+    
+    
+            var marker_cd01345b8319e2ce79d3ffd9b97e5af8 = L.marker(
+                [51.2608245, 7.1370448],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_fe214b8f1add360f9ec4d76546598855 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_86b6670d425fac1fef09389848a81b0b = $(`<div id="html_86b6670d425fac1fef09389848a81b0b" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Brunnenstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2608245,7.1370448" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_fe214b8f1add360f9ec4d76546598855.setContent(html_86b6670d425fac1fef09389848a81b0b);
+            
+        
+
+        marker_cd01345b8319e2ce79d3ffd9b97e5af8.bindPopup(popup_fe214b8f1add360f9ec4d76546598855)
+        ;
+
+        
+    
+    
+            var marker_614334bd838bdda0a95a555b822c24b9 = L.marker(
+                [51.2605739, 7.1363006],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_a62e6df8cedda568ebbe24182b87593e = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_6177acbd0d648604ac4543f548b94f8f = $(`<div id="html_6177acbd0d648604ac4543f548b94f8f" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Sattlerstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2605739,7.1363006" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_a62e6df8cedda568ebbe24182b87593e.setContent(html_6177acbd0d648604ac4543f548b94f8f);
+            
+        
+
+        marker_614334bd838bdda0a95a555b822c24b9.bindPopup(popup_a62e6df8cedda568ebbe24182b87593e)
+        ;
+
+        
+    
+    
+            var marker_ff703c7bc0ffa4f79630ab51f5108f8f = L.marker(
+                [51.2585911, 7.1416355],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_99b57225e76ad98322ad1e91dfa4739a = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_939f0e9649be1e926955bd8f7007dcf2 = $(`<div id="html_939f0e9649be1e926955bd8f7007dcf2" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Plateniusstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2585911,7.1416355" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_99b57225e76ad98322ad1e91dfa4739a.setContent(html_939f0e9649be1e926955bd8f7007dcf2);
+            
+        
+
+        marker_ff703c7bc0ffa4f79630ab51f5108f8f.bindPopup(popup_99b57225e76ad98322ad1e91dfa4739a)
+        ;
+
+        
+    
+    
+            var marker_fa9d3972dd274bf5371ec4ff6ce4cf26 = L.marker(
+                [51.259614, 7.1344056],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_e1be0712803d42537b1e1ff85d8ce9d9 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_555583f4730749d46ca201985632d59b = $(`<div id="html_555583f4730749d46ca201985632d59b" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Charlottenstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.259614,7.1344056" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_e1be0712803d42537b1e1ff85d8ce9d9.setContent(html_555583f4730749d46ca201985632d59b);
+            
+        
+
+        marker_fa9d3972dd274bf5371ec4ff6ce4cf26.bindPopup(popup_e1be0712803d42537b1e1ff85d8ce9d9)
+        ;
+
+        
+    
+    
+            var marker_759b77078c03e5325c81e7bebf126bfa = L.marker(
+                [51.2596468, 7.1338062],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_95b8e6457c58a6847e6b9f81583334ab = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_aef48f529c1e2f39711f9bd863286400 = $(`<div id="html_aef48f529c1e2f39711f9bd863286400" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Dorotheenstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2596468,7.1338062" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_95b8e6457c58a6847e6b9f81583334ab.setContent(html_aef48f529c1e2f39711f9bd863286400);
+            
+        
+
+        marker_759b77078c03e5325c81e7bebf126bfa.bindPopup(popup_95b8e6457c58a6847e6b9f81583334ab)
+        ;
+
+        
+    
+    
+            var marker_463c45e67399537a612cf4e651a92a9e = L.marker(
+                [51.2586797, 7.1401927],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_8af6aa108b079e47e5096cca9c6b3250 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_c8a2997b5d715ae0fe026fea7a59c3f6 = $(`<div id="html_c8a2997b5d715ae0fe026fea7a59c3f6" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Ekkehardstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2586797,7.1401927" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_8af6aa108b079e47e5096cca9c6b3250.setContent(html_c8a2997b5d715ae0fe026fea7a59c3f6);
+            
+        
+
+        marker_463c45e67399537a612cf4e651a92a9e.bindPopup(popup_8af6aa108b079e47e5096cca9c6b3250)
+        ;
+
+        
+    
+    
+            var marker_dbf6466ebf34fc3627a481bdba9fb5a8 = L.marker(
+                [51.2604649, 7.1415584],
+                {
+}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+        
+    
+        var popup_fb3f45677af4ba975ba6ba50a4151adb = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_9f7bfd04c829553316c11137c2c1b24e = $(`<div id="html_9f7bfd04c829553316c11137c2c1b24e" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Wielandstr</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2604649,7.1415584" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_fb3f45677af4ba975ba6ba50a4151adb.setContent(html_9f7bfd04c829553316c11137c2c1b24e);
+            
+        
+
+        marker_dbf6466ebf34fc3627a481bdba9fb5a8.bindPopup(popup_fb3f45677af4ba975ba6ba50a4151adb)
+        ;
+
+        
+    
+    
+            map_c8265661657a12fde482f8af0bf2a567.fitBounds(
+                [[51.261795, 7.1333478], [51.2576879, 7.1382251], [51.25954, 7.1387272], [51.2625082, 7.1360359], [51.2588118, 7.1391115], [51.2592634, 7.1352578], [51.262064, 7.1359116], [51.2583942, 7.1363735], [51.2603782, 7.134969], [51.2609858, 7.1378646], [51.2575435, 7.1393058], [51.2596271, 7.1423486], [51.2570399, 7.1343894], [51.2592056, 7.1412215], [51.2587113, 7.1380775], [51.2564116, 7.1324858], [51.2567657, 7.1360961], [51.2603618, 7.1410725], [51.2600421, 7.1399205], [51.2608245, 7.1370448], [51.2605739, 7.1363006], [51.2585911, 7.1416355], [51.259614, 7.1344056], [51.2596468, 7.1338062], [51.2586797, 7.1401927], [51.2604649, 7.1415584]],
+                {}
+            );
+        
+    
+            var locate_control_65d0da1d84ebf44445b933c32da7053a = L.control.locate(
+                {}
+            ).addTo(map_c8265661657a12fde482f8af0bf2a567);
+            
+        
+</script>
+</html>
