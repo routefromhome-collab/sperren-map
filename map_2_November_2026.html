@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_52e7eb97dcafaec4a4d74e71a869f37e {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-locatecontrol/0.66.2/L.Control.Locate.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-locatecontrol/0.66.2/L.Control.Locate.min.css"/>
+</head>
+<body>
+    
+    
+            <div class="folium-map" id="map_52e7eb97dcafaec4a4d74e71a869f37e" ></div>
+        
+
+        <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            try {
+                var MAP = null;
+                MAP = map_52e7eb97dcafaec4a4d74e71a869f37e;
+                if (!MAP) {
+                    MAP = Object.values(window).find(v => v && v._leaflet_id && v instanceof L.Map);
+                }
+                if (!MAP) {
+                    console.error("Map not found");
+                    return;
+                }
+
+                var STREETS = [{"name": "alter markt 5", "coords": [[51.2706871, 7.1968603]]}, {"name": "alter markt 7", "coords": [[51.2706082, 7.1966887]]}, {"name": "alter markt 9", "coords": [[51.2709147, 7.1965692]]}, {"name": "alter markt 10", "coords": [[51.2702464, 7.19784]]}, {"name": "alter markt 11", "coords": [[51.2710192, 7.1964171]]}, {"name": "alter markt 13", "coords": [[51.2711391, 7.1962356]]}, {"name": "alter markt 28", "coords": [[51.2711038, 7.1969594]]}, {"name": "alter markt 30", "coords": [[51.2710989, 7.1967415]]}, {"name": "alter markt 32", "coords": [[51.2712176, 7.196586]]}, {"name": "alter markt 34", "coords": [[51.2713099, 7.1964109]]}];
+
+                function haversine_m(a,b) {
+                    var R = 6371000;
+                    var φ1 = a[0]*Math.PI/180, φ2 = b[0]*Math.PI/180;
+                    var dφ = (b[0]-a[0])*Math.PI/180;
+                    var dλ = (b[1]-a[1])*Math.PI/180;
+                    var sa = Math.sin(dφ/2)*Math.sin(dφ/2) + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)*Math.sin(dλ/2);
+                    var c = 2*Math.atan2(Math.sqrt(sa), Math.sqrt(1-sa));
+                    return R*c;
+                }
+
+                function closestPointOnSegment(p, a, b) {
+                    var latScale = Math.cos(p[0]*Math.PI/180);
+                    var ax=a[0], ay=a[1]*latScale;
+                    var bx=b[0], by=b[1]*latScale;
+                    var px=p[0], py=p[1]*latScale;
+                    var vx=bx-ax, vy=by-ay;
+                    var wx=px-ax, wy=py-ay;
+                    var vlen2 = vx*vx + vy*vy;
+                    if (vlen2===0) return a.slice();
+                    var t = (vx*wx + vy*wy) / vlen2;
+                    t = Math.max(0, Math.min(1,t));
+                    var cx=ax+vx*t, cy=ay+vy*t;
+                    return [cx, cy/latScale];
+                }
+
+                function nearestPointOnPolyline(p, coords) {
+                    if (!coords || coords.length===0) return null;
+                    var best=null, bestDist=Infinity;
+                    if (coords.length===1) {
+                        return {point:coords[0], dist:haversine_m(p,coords[0])};
+                    }
+                    for (var i=0;i<coords.length-1;i++) {
+                        var a=coords[i], b=coords[i+1];
+                        var c=closestPointOnSegment(p,a,b);
+                        var d=haversine_m(p,c);
+                        if (d<bestDist) {
+                            bestDist=d;
+                            best={point:c,dist:d};
+                        }
+                    }
+                    return best;
+                }
+
+                function showNearestStreet() {
+                    if (!navigator.geolocation) {
+                        alert("Геолокация не поддерживается");
+                        return;
+                    }
+                    navigator.geolocation.getCurrentPosition(function(pos) {
+                        var user=[pos.coords.latitude,pos.coords.longitude];
+                        var bestStreet=null, bestInfo=null;
+
+                        for (var si=0;si<STREETS.length;si++) {
+                            var st=STREETS[si];
+                            var coords=st.coords||[];
+                            if (!coords.length) continue;                          
+                            var flat=(Array.isArray(coords[0]) && Array.isArray(coords[0][0]))? coords.flat():coords;
+                            var info=nearestPointOnPolyline(user,flat);
+                            if (!info) continue;
+                            if (!bestInfo || info.dist<bestInfo.dist) {
+                                bestInfo=info;
+                                bestStreet={name:st.name, coords:flat};
+                            }
+                        }
+
+                        if (!bestStreet || !bestInfo) {
+                            alert("Не удалось найти ближайшую улицу");
+                            return;
+                        }
+
+                        var nearPt=bestInfo.point;
+                        var meters=Math.round(bestInfo.dist);
+                        var walkMin=Math.max(1, Math.round((meters/1000)/5*60));
+
+                        MAP.flyTo(nearPt,17);
+
+                        if (!window._marks) window._marks=[];
+                        window._marks.forEach(function(l){ try { MAP.removeLayer(l); } catch(e){} });
+                        window._marks=[];
+
+                        setTimeout(function(){
+                            var m=L.marker(nearPt).addTo(MAP);
+                            m.bindPopup("<div style=\"font-size:14px;\">"+
+                            "Ближайшая улица: <b>"+(bestStreet.name||"—")+"</b><br><br>"+
+                            "Расстояние: "+meters+" м<br>"+
+                            "Пешком: примерно "+walkMin+" мин<br><br>"+
+                            "<a href=\"https://www.google.com/maps/search/?api=1&query="+nearPt[0]+","+nearPt[1]+"\" target=\"_blank\""+
+                            " style=\"display:inline-block;padding:8px 14px;background:#4285F4;color:white;border-radius:6px;text-decoration:none;font-weight:600;box-shadow:0 2px 4px rgba(0,0,0,0.2);transition:0.2s;\""+
+                            " onmouseover=\"this.style.background='#2f6ae1'\""+
+                            " onmouseout=\"this.style.background='#4285F4'\""+
+                            ">🔍 Открыть в Google Maps</a>"+
+                            "</div>").openPopup();
+                            window._marks.push(m);
+                        },650);
+
+                        var um=L.circleMarker(user,{radius:6,color:'#333',fillColor:'#fff',weight:2}).addTo(MAP);
+                        um.bindPopup("Вы здесь");
+                        window._marks.push(um);
+
+                    },function(err){ alert("Ошибка геопозиции: "+err.message); },
+                    {enableHighAccuracy:true,timeout:10000,maximumAge:0});
+                }
+
+                var btn=document.createElement("button");
+                btn.textContent="Показать ближайшую улицу ко мне";
+                btn.style.position="absolute";
+                btn.style.top="10px";
+                btn.style.left="50%";
+                btn.style.transform="translateX(-50%)";
+                btn.style.zIndex=1000;
+                btn.style.padding="8px 12px";
+                btn.style.background="white";
+                btn.style.border="1px solid #888";
+                btn.style.borderRadius="6px";
+                btn.onclick=showNearestStreet;
+                document.body.appendChild(btn);
+
+                var ad=document.createElement("div");
+                ad.innerHTML='<div style="font-size:15px;font-weight:bold;">⚡Карта предоставлена телеграм каналом Schwebezeit</div><div style="font-size:13px;">Нажми, перейди и подпишись</div>';
+                ad.style.position='fixed';
+                ad.style.bottom='20px';
+                ad.style.right='20px';
+                ad.style.zIndex='9999';
+                ad.style.background='white';
+                ad.style.borderRadius='12px';
+                ad.style.padding='10px 15px';
+                ad.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)';
+                ad.style.fontFamily='sans-serif';
+                ad.style.cursor='pointer';
+                ad.style.minWidth='200px';
+                ad.onclick=function(){ window.open('https://t.me/schwebezeit','_blank'); };
+                document.body.appendChild(ad);
+
+            } catch(e) {
+                console.error("MAP init error:",e);
+            }
+        });
+        </script>
+        </body>
+<script>
+    
+    
+            var map_52e7eb97dcafaec4a4d74e71a869f37e = L.map(
+                "map_52e7eb97dcafaec4a4d74e71a869f37e",
+                {
+                    center: [51.2562, 7.1508],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 12,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_781d14abd0597ab25edaf733b22b2f07 = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_781d14abd0597ab25edaf733b22b2f07.addTo(map_52e7eb97dcafaec4a4d74e71a869f37e);
+        
+    
+            var marker_c80bf8a6189590f81b000245104c9f3b = L.marker(
+                [51.2706871, 7.1968603],
+                {
+}
+            ).addTo(map_52e7eb97dcafaec4a4d74e71a869f37e);
+        
+    
+        var popup_b277612a9a0c9e5b4a574c65a413ba97 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_5618815edc696f8ff974673a85109bb9 = $(`<div id="html_5618815edc696f8ff974673a85109bb9" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Alter Markt 5</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2706871,7.1968603" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_b277612a9a0c9e5b4a574c65a413ba97.setContent(html_5618815edc696f8ff974673a85109bb9);
+            
+        
+
+        marker_c80bf8a6189590f81b000245104c9f3b.bindPopup(popup_b277612a9a0c9e5b4a574c65a413ba97)
+        ;
+
+        
+    
+    
+            var marker_89d41eb51f696bd0a993b6dc102fd385 = L.marker(
+                [51.2706082, 7.1966887],
+                {
+}
+            ).addTo(map_52e7eb97dcafaec4a4d74e71a869f37e);
+        
+    
+        var popup_730dcbff4e12c787a91252b2d29b87c7 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_11577908ffadcf284246e4bd340054a7 = $(`<div id="html_11577908ffadcf284246e4bd340054a7" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Alter Markt 7</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2706082,7.1966887" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_730dcbff4e12c787a91252b2d29b87c7.setContent(html_11577908ffadcf284246e4bd340054a7);
+            
+        
+
+        marker_89d41eb51f696bd0a993b6dc102fd385.bindPopup(popup_730dcbff4e12c787a91252b2d29b87c7)
+        ;
+
+        
+    
+    
+            var marker_b4088e5cf66edce906f8e28e59dfba79 = L.marker(
+                [51.2709147, 7.1965692],
+                {
+}
+            ).addTo(map_52e7eb97dcafaec4a4d74e71a869f37e);
+        
+    
+        var popup_84a54800866fd7930aaf9c6d3ba0869c = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_99d3e278cc430daf8e7efd1c4a2ce6f4 = $(`<div id="html_99d3e278cc430daf8e7efd1c4a2ce6f4" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Alter Markt 9</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2709147,7.1965692" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_84a54800866fd7930aaf9c6d3ba0869c.setContent(html_99d3e278cc430daf8e7efd1c4a2ce6f4);
+            
+        
+
+        marker_b4088e5cf66edce906f8e28e59dfba79.bindPopup(popup_84a54800866fd7930aaf9c6d3ba0869c)
+        ;
+
+        
+    
+    
+            var marker_43b82a8b3b50e1315a290b205b80e633 = L.marker(
+                [51.2702464, 7.19784],
+                {
+}
+            ).addTo(map_52e7eb97dcafaec4a4d74e71a869f37e);
+        
+    
+        var popup_a786c816323ab82c86bb9dfaaf956702 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_e83fa432eca292c5c607bccdf413ec15 = $(`<div id="html_e83fa432eca292c5c607bccdf413ec15" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Alter Markt 10</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2702464,7.19784" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_a786c816323ab82c86bb9dfaaf956702.setContent(html_e83fa432eca292c5c607bccdf413ec15);
+            
+        
+
+        marker_43b82a8b3b50e1315a290b205b80e633.bindPopup(popup_a786c816323ab82c86bb9dfaaf956702)
+        ;
+
+        
+    
+    
+            var marker_556dac5da1ff3fc3c59f1fbbc89bfab2 = L.marker(
+                [51.2710192, 7.1964171],
+                {
+}
+            ).addTo(map_52e7eb97dcafaec4a4d74e71a869f37e);
+        
+    
+        var popup_a7f8f0e8f6e2cf329f02db811063f2df = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_af2bb1d84853780e029ce0d9cd7326c9 = $(`<div id="html_af2bb1d84853780e029ce0d9cd7326c9" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Alter Markt 11</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2710192,7.1964171" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_a7f8f0e8f6e2cf329f02db811063f2df.setContent(html_af2bb1d84853780e029ce0d9cd7326c9);
+            
+        
+
+        marker_556dac5da1ff3fc3c59f1fbbc89bfab2.bindPopup(popup_a7f8f0e8f6e2cf329f02db811063f2df)
+        ;
+
+        
+    
+    
+            var marker_2f85943ab5394f71600e12e4e1d5d9e2 = L.marker(
+                [51.2711391, 7.1962356],
+                {
+}
+            ).addTo(map_52e7eb97dcafaec4a4d74e71a869f37e);
+        
+    
+        var popup_8fbe0c64239746f01d9b03716a60b8ce = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_5a92ea75befd2c2036abcdf30f408146 = $(`<div id="html_5a92ea75befd2c2036abcdf30f408146" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Alter Markt 13</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2711391,7.1962356" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_8fbe0c64239746f01d9b03716a60b8ce.setContent(html_5a92ea75befd2c2036abcdf30f408146);
+            
+        
+
+        marker_2f85943ab5394f71600e12e4e1d5d9e2.bindPopup(popup_8fbe0c64239746f01d9b03716a60b8ce)
+        ;
+
+        
+    
+    
+            var marker_b1e9de3d40009c94a1352686bc65d27f = L.marker(
+                [51.2711038, 7.1969594],
+                {
+}
+            ).addTo(map_52e7eb97dcafaec4a4d74e71a869f37e);
+        
+    
+        var popup_1a115acbcfc612534ac5b3efd842e233 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_b167ad3c85569fba4eeb849169923503 = $(`<div id="html_b167ad3c85569fba4eeb849169923503" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Alter Markt 28</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2711038,7.1969594" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_1a115acbcfc612534ac5b3efd842e233.setContent(html_b167ad3c85569fba4eeb849169923503);
+            
+        
+
+        marker_b1e9de3d40009c94a1352686bc65d27f.bindPopup(popup_1a115acbcfc612534ac5b3efd842e233)
+        ;
+
+        
+    
+    
+            var marker_4fe99ede7db3c4b0693e192249a8ae93 = L.marker(
+                [51.2710989, 7.1967415],
+                {
+}
+            ).addTo(map_52e7eb97dcafaec4a4d74e71a869f37e);
+        
+    
+        var popup_bab9e38541b43f10bc4bc1b34b9926be = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_f8d78ce83097be128bcec615171650bd = $(`<div id="html_f8d78ce83097be128bcec615171650bd" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Alter Markt 30</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2710989,7.1967415" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_bab9e38541b43f10bc4bc1b34b9926be.setContent(html_f8d78ce83097be128bcec615171650bd);
+            
+        
+
+        marker_4fe99ede7db3c4b0693e192249a8ae93.bindPopup(popup_bab9e38541b43f10bc4bc1b34b9926be)
+        ;
+
+        
+    
+    
+            var marker_bf4f47877a7f74f04a9782cac45331e4 = L.marker(
+                [51.2712176, 7.196586],
+                {
+}
+            ).addTo(map_52e7eb97dcafaec4a4d74e71a869f37e);
+        
+    
+        var popup_4a5b13378380a7c5d10d2f0c7eb0e869 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_fb55fc858b791df04464c22b439491fb = $(`<div id="html_fb55fc858b791df04464c22b439491fb" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Alter Markt 32</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2712176,7.196586" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_4a5b13378380a7c5d10d2f0c7eb0e869.setContent(html_fb55fc858b791df04464c22b439491fb);
+            
+        
+
+        marker_bf4f47877a7f74f04a9782cac45331e4.bindPopup(popup_4a5b13378380a7c5d10d2f0c7eb0e869)
+        ;
+
+        
+    
+    
+            var marker_b290721ef51ad6019ab3653db08908ab = L.marker(
+                [51.2713099, 7.1964109],
+                {
+}
+            ).addTo(map_52e7eb97dcafaec4a4d74e71a869f37e);
+        
+    
+        var popup_929d2d04cb27ef36d195d6da7a221c5f = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_f6f053a3afaf473530ea08d201de3e42 = $(`<div id="html_f6f053a3afaf473530ea08d201de3e42" style="width: 100.0%; height: 100.0%;">                 <div style="font-size:14px;">                     <b>Alter Markt 34</b><br><br>                     <a href="https://www.google.com/maps/search/?api=1&query=51.2713099,7.1964109" target="_blank"                        style="                            display:inline-block;                            padding:8px 14px;                            background:#4285F4;                            color:white;                            border-radius:6px;                            text-decoration:none;                            font-weight:600;                            box-shadow:0 2px 4px rgba(0,0,0,0.2);                            transition:0.2s;                        "                        onmouseover="this.style.background='#2f6ae1'"                        onmouseout="this.style.background='#4285F4'"                     >                         🔍 Открыть в Google Maps                     </a>                 </div>                 </div>`)[0];
+                popup_929d2d04cb27ef36d195d6da7a221c5f.setContent(html_f6f053a3afaf473530ea08d201de3e42);
+            
+        
+
+        marker_b290721ef51ad6019ab3653db08908ab.bindPopup(popup_929d2d04cb27ef36d195d6da7a221c5f)
+        ;
+
+        
+    
+    
+            map_52e7eb97dcafaec4a4d74e71a869f37e.fitBounds(
+                [[51.2706871, 7.1968603], [51.2706082, 7.1966887], [51.2709147, 7.1965692], [51.2702464, 7.19784], [51.2710192, 7.1964171], [51.2711391, 7.1962356], [51.2711038, 7.1969594], [51.2710989, 7.1967415], [51.2712176, 7.196586], [51.2713099, 7.1964109]],
+                {}
+            );
+        
+    
+            var locate_control_767c5cff018bfc2cf51e190d9825e40d = L.control.locate(
+                {}
+            ).addTo(map_52e7eb97dcafaec4a4d74e71a869f37e);
+            
+        
+</script>
+</html>
