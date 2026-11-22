@@ -16,8 +16,8 @@ from tqdm.asyncio import tqdm_asyncio
 print(os.getcwd())
 
 # ===================== Настройки =====================
-TELEGRAM_BOT_TOKEN = '7058608882:AAG1Hdp0bIGPW8n8g2WpeytP90PhHNtvTvc'
-CHAT_ID = '-1002659153629'
+TELEGRAM_BOT_TOKEN = ''
+CHAT_ID = ''
 CACHE_FILE = 'cache.json'
 
 headers = {
