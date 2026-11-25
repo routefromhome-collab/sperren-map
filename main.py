@@ -632,8 +632,10 @@ async def fetch_and_parse(
 ):
     async with semaphore:
         key = f"{street}__{current_month}__{current_day}"
+
         if key in cache:
             return cache[key]
+
         text = await safe_request(
             session,
             "POST",
@@ -642,84 +644,196 @@ async def fetch_and_parse(
             data=data,
             timeout=aiohttp.ClientTimeout(total=25),
         )
+
+        # Не кешируем ошибку первоначального запроса.
         if not text:
-            cache[key] = None
             return None
 
         soup = BeautifulSoup(text, "lxml")
-        month_divs = soup.find_all("div", class_="month")
         page_text = soup.get_text(" ", strip=True)
-        is_calendar = any(div.find("div") for div in month_divs)
+
         found_addresses = []
 
-        # страница с выбором домов
-        if "Auf dieser Straße gibt es mehrere Abfallkalender" in page_text:
-            house_links = soup.select('a[href*="streetname"]')
-            for link in house_links:
-                house_number = link.get_text(strip=True)
-                if not house_number:
-                    continue
-                full_link = urljoin(url, link.get("href"))
-                house_text = await safe_request(
-                    session,
-                    "GET",
-                    full_link,
-                    rate_limiter,
-                    timeout=aiohttp.ClientTimeout(total=15),
-                )
-                if not house_text:
-                    continue
-                house_soup = BeautifulSoup(house_text, "lxml")
-                for month_div in house_soup.find_all("div", class_="month"):
-                    header = month_div.find(["h3", "span"])
-                    if not header:
-                        continue
-                    if header.get_text(strip=True) != current_month:
-                        continue
-                    for td in month_div.find_all(
-                        "td", class_=["", "holiday", "exception"]
-                    ):
-                        day_text = "".join(re.findall(r"\d+", td.get_text()))
-                        if day_text == current_day and td.find("i", title="Sperrmüll"):
-                            # сохраняем полный адрес "Street Name house"
-                            found_addresses.append(f"{street} {house_number}")
+        # --------------------------------------------------
+        # Проверка календаря
+        # --------------------------------------------------
+        def check_calendar(calendar_soup):
+            """
+            Ищет Sperrmüll в конкретном месяце и дне.
 
-        # если сразу календарь для всей улицы
-        elif is_calendar:
-            for month_div in month_divs:
-                header = month_div.find(["h3", "span"])
+            Структура:
+            div.month
+                .info h3
+                tr.day
+                    span.weekday
+                    i[title="Sperrmüll"]
+            """
+
+            requested_month = str(current_month).strip().casefold()
+
+            for month_div in calendar_soup.select("div.month"):
+                header = month_div.select_one(".info h3")
+
+                if not header:
+                    header = month_div.find(["h3", "span"])
 
                 if not header:
                     continue
-                if header.get_text(strip=True) != current_month:
+
+                header_text = header.get_text(" ", strip=True)
+                normalized_header = header_text.casefold()
+
+                # Поддерживаем оба варианта:
+                # current_month = "Oktober"
+                # current_month = "Oktober 2026"
+                if normalized_header != requested_month:
+                    if not normalized_header.startswith(requested_month + " "):
+                        continue
+
+                for row in month_div.select("tr.day"):
+                    date_span = row.select_one("span.weekday")
+
+                    if not date_span:
+                        continue
+
+                    date_text = date_span.get_text(" ", strip=True)
+
+                    match = re.search(
+                        r"\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b",
+                        date_text,
+                    )
+
+                    if not match:
+                        continue
+
+                    day, month, year = match.groups()
+
+                    # Сравниваем числа, чтобы 06 и 6 считались одинаково.
+                    try:
+                        if int(day) != int(current_day):
+                            continue
+                    except (ValueError, TypeError):
+                        continue
+
+                    # Значок должен находиться именно в строке даты.
+                    if row.select_one('i[title="Sperrmüll"]'):
+                        return True
+
+            return False
+
+        # --------------------------------------------------
+        # Получение ссылок на отдельные дома
+        # --------------------------------------------------
+        def get_house_links(page_soup):
+            """
+            Возвращает ссылки на номера домов из блока выбора
+            адреса, например Alter Markt: 1, 5, 7, 34.
+            """
+
+            container = page_soup.select_one(".tx-bwwastecalendar-pi1.container")
+
+            if container:
+                links = container.select('a[href*="streetname"]')
+            else:
+                links = page_soup.select('a[href*="streetname"]')
+
+            result = []
+
+            for link in links:
+                house_number = link.get_text(" ", strip=True)
+                href = link.get("href")
+
+                if not house_number or not href:
                     continue
-                day_divs = month_div.find_all("div", class_="day")
 
-                for day in day_divs:
-                    span = day.find("span")
-                    if not span:
-                        continue
-                    day_numbers = re.findall(r"\d+", span.get_text())
-                    if not day_numbers:
-                        continue
-                    day_text = day_numbers[0]
-                    if day_text == current_day and day.find("i", title="Sperrmüll"):
-                        found_addresses.append(street)
+                # Ссылки на дома содержат числовой номер.
+                # Не принимаем за номер произвольный текст ссылки.
+                if not re.fullmatch(r"\d+[a-zA-Z]?", house_number):
+                    continue
+
+                result.append((house_number, urljoin(url, href)))
+
+            # Убираем повторяющиеся ссылки.
+            unique_links = []
+            seen_urls = set()
+
+            for house_number, house_url in result:
+                if house_url in seen_urls:
+                    continue
+
+                seen_urls.add(house_url)
+                unique_links.append((house_number, house_url))
+
+            return unique_links
+
+        # --------------------------------------------------
+        # Вариант 1: календарь улицы сразу присутствует в HTML
+        # --------------------------------------------------
+        if soup.select_one("div.month tr.day"):
+            if check_calendar(soup):
+                found_addresses.append(street)
+
         else:
-            # ищем все варианты похожих улиц
-            similar_links = soup.select('a[href*="streetname"]')
-            for link in similar_links:
-                street_text = link.get_text(strip=True)
+            # --------------------------------------------------
+            # Вариант 2: улица имеет несколько календарей
+            # --------------------------------------------------
+            has_multiple_calendars = (
+                "Auf dieser Straße gibt es mehrere Abfallkalender" in page_text
+            )
 
-                # сравнение нормализованное, чтобы исключить ошибки регистра и пробелов
-                if normalize_street_name(street_text) == normalize_street_name(street):
-                    full_link = urljoin(url, link.get("href"))
+            house_links = get_house_links(soup)
 
-                    # скачиваем страницу с реальной улицей
+            if has_multiple_calendars and house_links:
+                for house_number, house_url in house_links:
+                    house_text = await safe_request(
+                        session,
+                        "GET",
+                        house_url,
+                        rate_limiter,
+                        timeout=aiohttp.ClientTimeout(total=15),
+                    )
+
+                    # Не кешируем итог, если один из запросов
+                    # временно не удался и результат может быть неполным.
+                    if not house_text:
+                        continue
+
+                    house_soup = BeautifulSoup(
+                        house_text,
+                        "lxml",
+                    )
+
+                    if check_calendar(house_soup):
+                        found_addresses.append(f"{street} {house_number}")
+
+            # --------------------------------------------------
+            # Вариант 3: похожие или уточнённые названия улиц
+            # --------------------------------------------------
+            else:
+                similar_links = soup.select('a[href*="streetname"]')
+
+                for link in similar_links:
+                    street_text = link.get_text(
+                        " ",
+                        strip=True,
+                    )
+
+                    if normalize_street_name(street_text) != normalize_street_name(
+                        street
+                    ):
+                        continue
+
+                    href = link.get("href")
+
+                    if not href:
+                        continue
+
+                    exact_url = urljoin(url, href)
+
                     exact_page = await safe_request(
                         session,
                         "GET",
-                        full_link,
+                        exact_url,
                         rate_limiter,
                         timeout=aiohttp.ClientTimeout(total=15),
                     )
@@ -727,32 +841,24 @@ async def fetch_and_parse(
                     if not exact_page:
                         continue
 
-                    exact_soup = BeautifulSoup(exact_page, "lxml")
+                    exact_soup = BeautifulSoup(
+                        exact_page,
+                        "lxml",
+                    )
 
-                    # повторяем стандартный парсинг
-                    for month_div in exact_soup.find_all("div", class_="month"):
-                        header = month_div.find(["h3", "span"])
-                        if not header:
-                            continue
-                        if header.get_text(strip=True) != current_month:
-                            continue
-                        day_divs = month_div.find_all("div", class_="day")
-                        for day in day_divs:
-                            span = day.find("span")
-                            if not span:
-                                continue
-                            day_numbers = re.findall(r"\d+", span.get_text())
-                            if not day_numbers:
-                                continue
-                            day_text = day_numbers[0]
-                            if day_text == current_day and day.find(
-                                "i", title="Sperrmüll"
-                            ):
-                                found_addresses.append(street)
+                    if check_calendar(exact_soup):
+                        found_addresses.append(street)
 
-        cache[key] = found_addresses if found_addresses else None
+        # --------------------------------------------------
+        # Удаление дубликатов и сохранение результата
+        # --------------------------------------------------
+        found_addresses = list(dict.fromkeys(found_addresses))
 
-        return cache[key]
+        result = found_addresses if found_addresses else None
+
+        cache[key] = result
+
+        return result
 
 
 # ------- Создание карты (включаем ВСЕ адреса) и пуш в Git (аккуратно) -------
@@ -1288,7 +1394,7 @@ def create_map_and_push(addresses, city, filename="map.html", geocoded_coords=No
 async def start_parsing(application: Application):
     bot = application.bot
 
-    target_date = datetime.strptime("29 September 2026", "%d %B %Y")
+    target_date = datetime.strptime("12 January 2027", "%d %B %Y")
     month_translation = {
         "January": "Januar",
         "February": "Februar",
@@ -1307,7 +1413,7 @@ async def start_parsing(application: Application):
     # read streets
     streets_df = pd.read_excel("2.xlsx", engine="openpyxl")
     streets = streets_df["STRNAME"].str.rstrip(".").to_list()
-    # streets = ["Holzer str"]
+    # streets = ["Alter Markt"]
     city = "Wuppertal"
     url = "https://awg-wuppertal.de/privatkunden/abfallkalender.html"
 
@@ -1336,7 +1442,7 @@ async def start_parsing(application: Application):
         }
         semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
 
-        days_ahead = 6
+        days_ahead = 7
         for day_offset in range(days_ahead):
             current_date = target_date + timedelta(days=day_offset)
             current_day = current_date.strftime("%d").lstrip("0")
